@@ -42,7 +42,6 @@ const TopNavbar: React.FC = () => {
             <div className="flex-grow flex justify-center">
                 <h1 className="text-white text-xl font-bold">TreeChat</h1>
             </div>
-            {/* Add other nav items here if needed */}
         </nav>
     );
 };
