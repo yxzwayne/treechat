@@ -1,4 +1,4 @@
-"use client"
+'use client';
 
 import { useState } from 'react';
 
@@ -6,7 +6,7 @@ export default function NewChatBox() {
     const [inputText, setInputText] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
-    const sendMessage = async () => {
+    const sendMessage = async (message: string) => {
         setIsLoading(true);
         try {
             const response = await fetch('/api/chat', {
@@ -14,8 +14,13 @@ export default function NewChatBox() {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ message: inputText }),
+                body: JSON.stringify({ message }),
             });
+
+            if (!response.ok) {
+                throw new Error('Failed to send message');
+            }
+
             const data = await response.json();
             console.log('Anthropic response:', data.response);
         } catch (error) {
@@ -37,7 +42,7 @@ export default function NewChatBox() {
             <button
                 className="w-full p-2 bg-sky-500 disabled:opacity-50"
                 disabled={inputText.trim() === '' || isLoading}
-                onClick={sendMessage}
+                onClick={() => sendMessage(inputText)}
             >
                 {isLoading ? 'Sending...' : 'Send'}
             </button>
