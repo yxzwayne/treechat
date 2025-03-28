@@ -1,0 +1,21 @@
+{
+  "name": "server",
+  "module": "app.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "bun run app.js",
+    "dev": "bun --watch run app.js"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.8.2"
+  },
+  "dependencies": {
+    "@koa/router": "^13.1.0",
+    "koa": "^2.16.0",
+    "koa-bodyparser": "^4.4.1",
+    "postgres": "^3.4.5"
+  }
+}

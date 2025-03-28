@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Zoomable Canvas</title>
+    <style>
+      body,
+      html {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+      #viewport {
+        width: 100vw;
+        height: 100vh;
+        overflow: hidden;
+        position: relative;
+      }
+      #content {
+        position: absolute;
+        transform-origin: left top;
+        width: 2000px;
+        height: 2000px;
+      }
+      .rectangle {
+        position: absolute;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="viewport">
+      <div id="content">
+        <!-- Infinite canvas content goes here -->
+        <p>Zoom and pan around this content.</p>
+        <!-- Add more content as needed -->
+      </div>
+    </div>
+
+    <script>
+      const viewport = document.getElementById("viewport");
+      const content = document.getElementById("content");
+
+      function generateRectangles(number) {
+        for (let i = 0; i < number; i++) {
+          const rect = document.createElement("div");
+          rect.classList.add("rectangle");
+          rect.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 75%)`;
+          rect.style.left = `${Math.random() * 1800}px`;
+          rect.style.top = `${Math.random() * 1800}px`;
+          rect.style.width = `${50 + Math.random() * 150}px`;
+          rect.style.height = `${50 + Math.random() * 150}px`;
+          content.appendChild(rect);
+        }
+      }
+
+      generateRectangles(50);
+
+      let scale = 1;
+      let originX = 0;
+      let originY = 0;
+
+      viewport.addEventListener("wheel", (event) => {
+        event.preventDefault();
+        const rect = viewport.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+
+        const zoomIntensity = 0.1;
+        const factor = Math.pow(1.1, -event.deltaY * zoomIntensity);
+
+        scale *= factor;
+        scale = Math.min(Math.max(0.1, scale), 10);
+
+        originX = x - (x - originX) * factor;
+        originY = y - (y - originY) * factor;
+
+        updateTransform();
+      });
+
+      let isPanning = false;
+      let startX = 0;
+      let startY = 0;
+
+      viewport.addEventListener("mousedown", (event) => {
+        isPanning = true;
+        startX = event.clientX - originX;
+        startY = event.clientY - originY;
+      });
+
+      viewport.addEventListener("mouseup", () => {
+        isPanning = false;
+      });
+
+      viewport.addEventListener("mouseleave", () => {
+        isPanning = false;
+      });
+
+      viewport.addEventListener("mousemove", (event) => {
+        if (isPanning) {
+          originX = event.clientX - startX;
+          originY = event.clientY - startY;
+          updateTransform();
+        }
+      });
+
+      function updateTransform() {
+        content.style.transform = `translate(${originX}px, ${originY}px) scale(${scale})`;
+      }
+    </script>
+  </body>
+</html>

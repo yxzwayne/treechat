@@ -1,0 +1,18 @@
+{
+  "uuid": "df88f6f4-3f2b-4b7c-af60-6ad552cce7c0",
+  "text": " This is ...",
+  "content": [
+    {
+      "start_timestamp": "2024-06-26T04:25:44.912522Z",
+      "stop_timestamp": "2024-06-26T04:25:44.912522Z",
+      "type": "text",
+      "text": " This is ...",
+      "citations": []
+    }
+  ],
+  "sender": "assistant",
+  "created_at": "2024-06-26T04:25:44.912522Z",
+  "updated_at": "2024-06-26T04:25:44.912522Z",
+  "attachments": [],
+  "files": []
+}
