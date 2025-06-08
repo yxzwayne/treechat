@@ -4,18 +4,29 @@
   "type": "module",
   "scripts": {
     "start": "bun run app.js",
-    "dev": "bun --watch run app.js"
+    "dev": "bun --watch run app.js",
+    "db:reset": "bun run scripts/reset-db.js",
+    "test": "bun test",
+    "test:load": "bun run scripts/run-load-test.js",
+    "test:api": "bun run test-api.js"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "supertest": "^6.3.3"
   },
   "peerDependencies": {
     "typescript": "^5.8.2"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.53.0",
     "@koa/router": "^13.1.0",
+    "dotenv": "^16.5.0",
     "koa": "^2.16.0",
+    "koa-body": "^6.0.1",
     "koa-bodyparser": "^4.4.1",
-    "postgres": "^3.4.5"
+    "mime-types": "^3.0.1",
+    "p-queue": "^8.1.0",
+    "postgres": "^3.4.5",
+    "uuid": "^11.1.0"
   }
 }

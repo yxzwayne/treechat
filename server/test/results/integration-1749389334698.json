@@ -1,0 +1,78 @@
+[
+  {
+    "question": "What are the major philosophical schools of thought?",
+    "messageId": "dc958861-2f8f-46e4-ad6a-fed881aa352d",
+    "aiResponseId": "93d47e32-7559-414f-9fc9-add102260c61",
+    "aiResponseReceived": true,
+    "duration": 12330,
+    "timestamp": "2025-06-08T13:27:47.405Z"
+  },
+  {
+    "question": "What is the scientific method and why is it important?",
+    "messageId": "2247ef2c-6fd3-4a1e-b4b4-8bf1f8c695a9",
+    "aiResponseId": "30e8637f-2d55-48d6-b34f-fc5d377f38f2",
+    "aiResponseReceived": true,
+    "duration": 10548,
+    "timestamp": "2025-06-08T13:27:57.953Z"
+  },
+  {
+    "question": "What is the future of work in an automated world?",
+    "messageId": "7d42ca0e-afcd-49d9-ba91-ad26d171761a",
+    "aiResponseId": "79c064e8-ea48-4221-bc92-310a01db9b8b",
+    "aiResponseReceived": true,
+    "duration": 9438,
+    "timestamp": "2025-06-08T13:28:07.391Z"
+  },
+  {
+    "question": "What is the most efficient way to learn a new language?",
+    "messageId": "8fa28d64-d6d2-4fcc-a876-a60f124653cd",
+    "aiResponseId": "4b37cc9b-0393-45bb-8377-960264a3b213",
+    "aiResponseReceived": true,
+    "duration": 9199,
+    "timestamp": "2025-06-08T13:28:16.590Z"
+  },
+  {
+    "question": "What is the relationship between diet and health?",
+    "messageId": "00514f8f-6dd1-491d-9e70-814df9425449",
+    "aiResponseId": "fb05ad60-7eab-4bae-941e-1ca4c888f447",
+    "aiResponseReceived": true,
+    "duration": 10034,
+    "timestamp": "2025-06-08T13:28:26.624Z"
+  },
+  {
+    "question": "What is the difference between AI and human intelligence?",
+    "messageId": "210c5504-5d70-4b3f-8c12-4e621ad332a7",
+    "aiResponseId": "f715e066-c71f-4af0-b731-527128c80b3b",
+    "aiResponseReceived": true,
+    "concurrent": true,
+    "duration": 15436,
+    "timestamp": "2025-06-08T13:28:42.061Z"
+  },
+  {
+    "question": "What is the current state of quantum computing?",
+    "messageId": "78670511-b3e0-45d5-99fc-104fd34e0580",
+    "aiResponseId": "b6b10136-b534-47aa-87ff-4eabb9ab75ae",
+    "aiResponseReceived": true,
+    "concurrent": true,
+    "duration": 15436,
+    "timestamp": "2025-06-08T13:28:42.061Z"
+  },
+  {
+    "question": "What are the major philosophical schools of thought?",
+    "messageId": "4196e636-0ac8-42af-8491-0e28080e6a98",
+    "aiResponseId": "3f138fc2-e5b8-417b-bdff-5666449fa9c7",
+    "aiResponseReceived": true,
+    "concurrent": true,
+    "duration": 15436,
+    "timestamp": "2025-06-08T13:28:42.061Z"
+  },
+  {
+    "question": "How does encryption protect our data?",
+    "directApiCallDuration": 2269,
+    "ourApiCallDuration": 10366,
+    "directApiSuccess": true,
+    "ourApiSuccess": true,
+    "comparisonTest": true,
+    "timestamp": "2025-06-08T13:28:54.697Z"
+  }
+]
