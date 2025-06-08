@@ -19,6 +19,15 @@ if (!fs.existsSync(uploadsDir)) {
 // Add sql to the app context for easier access in controllers
 app.context.sql = sql;
 
+// Debug database connection
+app.use(async (ctx, next) => {
+  // Log database connection for debugging
+  if (ctx.path.includes('/api/attachments')) {
+    console.log(`Using SQL connection for ${ctx.path}, is test DB: ${ctx.app.context.sql.options.database === 'treechat_test'}`);
+  }
+  await next();
+});
+
 // Error handling
 app.on('error', (err, ctx) => {
   console.error('Server error:', err);
@@ -83,25 +92,38 @@ app.use(attachmentRoutes.allowedMethods());
 app.use(metricsRoutes.routes());
 app.use(metricsRoutes.allowedMethods());
 
-// Start server
-const port = process.env.PORT || 3000;
-const server = app.listen(port, () => {
-  console.log(`Chat server running on http://localhost:${port}`);
-});
-
-// Graceful shutdown
-process.on('SIGINT', async () => {
-  console.log('Shutting down server...');
-  await sql.end();
-  server.close(() => {
-    console.log('Server closed');
-    process.exit(0);
+// Define the startup function but don't automatically start the server
+// This allows tests to control when the server starts
+const startServer = (customPort) => {
+  const port = customPort || process.env.PORT || 3000;
+  const server = app.listen(port, () => {
+    console.log(`Chat server running on http://localhost:${port}`);
   });
-});
+  
+  // Store server on app for tests to access
+  app.server = server;
+  
+  return server;
+};
+
+// Start server if not imported by tests
+if (process.env.NODE_ENV !== 'test') {
+  const server = startServer();
+  
+  // Graceful shutdown
+  process.on('SIGINT', async () => {
+    console.log('Shutting down server...');
+    await sql.end();
+    server.close(() => {
+      console.log('Server closed');
+      process.exit(0);
+    });
+  });
+}
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
-export { app, sql };
+export { app, sql, startServer };

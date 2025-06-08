@@ -1,8 +1,13 @@
-import sql from '../config/database.js';
+// Import default SQL connection, but allow for custom SQL from context
+import defaultSql from '../config/database.js';
+
+// For backward compatibility
+let sql = defaultSql;
 
 class MessageModel {
-  async findByUuid(uuid) {
-    return await sql`
+  async findByUuid(uuid, customSql) {
+    const db = customSql || sql;
+    return await db`
       SELECT * FROM messages WHERE uuid = ${uuid}
     `;
   }

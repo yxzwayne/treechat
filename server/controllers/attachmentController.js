@@ -5,13 +5,15 @@ import path from 'path';
 class AttachmentController {
   async getAttachment(ctx) {
     const { uuid } = ctx.params;
-    const attachment = await AttachmentService.getAttachment(uuid);
+    // Pass context SQL to ensure we use the right database connection
+    const attachment = await AttachmentService.getAttachment(uuid, ctx.sql);
     ctx.body = attachment;
   }
 
   async getAttachmentFile(ctx) {
     const { uuid } = ctx.params;
-    const attachment = await AttachmentService.getAttachment(uuid);
+    // Pass context SQL to ensure we use the right database connection
+    const attachment = await AttachmentService.getAttachment(uuid, ctx.sql);
     const filePath = AttachmentService.getFilePath(attachment);
 
     try {
@@ -33,7 +35,8 @@ class AttachmentController {
 
   async getAttachmentsByMessage(ctx) {
     const { messageId } = ctx.params;
-    const attachments = await AttachmentService.getAttachmentsByMessage(messageId);
+    // Pass context SQL to ensure we use the right database connection
+    const attachments = await AttachmentService.getAttachmentsByMessage(messageId, ctx.sql);
     ctx.body = attachments;
   }
 
@@ -47,7 +50,10 @@ class AttachmentController {
       return;
     }
 
-    const attachment = await AttachmentService.createAttachment(file, messageId);
+    console.log(`AttachmentController: Creating attachment for message ID: ${messageId} using DB: ${ctx.sql.options.database}`);
+    
+    // Pass context SQL to ensure we use the right database connection
+    const attachment = await AttachmentService.createAttachment(file, messageId, ctx.sql);
     ctx.status = 201;
     ctx.body = attachment;
   }

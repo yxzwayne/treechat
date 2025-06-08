@@ -132,9 +132,20 @@ CREATE INDEX ON attachments(message_id);
 Completed with all required functionality and tests.
 
 ### 🔄 Stage 2: AI chat UI resembling current meta (Next Steps)
-- Develop frontend with conversation sidebar
-- Implement standard chat interface
-- Optimize rendering performance
+- Develop frontend with React + Remix (NOT Next.js)
+- Implement conversation sidebar similar to ChatGPT/Claude
+- Create custom-built core chat components:
+  - Message input and response components
+  - Conversation container and navigation
+- Use shadcn/ui for auxiliary components (buttons, dropdowns, etc.)
+- Match functionality of existing AI chat interfaces
+
+### 🔄 Stage 2.1: Message Queue System
+- Implement local queue system to handle API rate limits
+- Add UI elements to inform users about throttling/rate limiting
+- Implement persistence for queued messages to prevent message loss
+- Create graceful recovery from API failures and timeouts
+- Ensure seamless user experience despite backend limitations
 
 ### 🔄 Stage 3: Tree branching UI (Future)
 - Implement visual tree structure for conversations
@@ -148,8 +159,131 @@ Tests have been implemented for:
 - Concurrent message handling
 - Claude API integration
 - Error scenarios
+- File attachment functionality
 
 The test suite uses a dedicated `treechat_test` database that is reset before each test run for clean state. Tests randomly sample questions to verify AI response generation.
+
+### Test Commands
+
+```bash
+# Run all tests
+bun run test
+
+# Run only the attachment tests
+bun run test:attachment
+
+# Run load tests
+bun run test:load
+```
+
+### Known Testing Issues
+
+The main API tests currently have issues with the attachment endpoints due to database connection management challenges. However, the dedicated attachment test (`test/attachment.test.js`) works properly and verifies that the attachment functionality is implemented correctly.
+
+All other backend functionality is verified by the test suite, including:
+- Conversation management
+- Message creation and retrieval
+- AI integration with Claude
+- Concurrent request handling
+- System metrics
+
+### Recent Improvements
+
+We've completed several important fixes and improvements to the backend:
+
+1. **Fixed Attachment Functionality**:
+   - Implemented a dedicated test file for attachment tests that manages its own database connection
+   - Modified the attachment model and service to correctly pass database context through the service chain
+   - Ensured proper creation and verification of the attachments table
+   - Fixed MIME type handling for file uploads
+
+2. **Database Connection Management**:
+   - Improved how database connections are handled in tests
+   - Created a more robust testDatabaseFactory with support for manual connections
+   - Enhanced error handling for database operations
+
+3. **Test Infrastructure**:
+   - Added specific test scripts for different components
+   - Implemented proper database reset and cleanup
+   - Added comprehensive logging for better debugging
+   - Fixed concurrent test execution issues
+
+## Frontend Architecture (Stage 2)
+
+### Technology Stack
+
+- **Framework**: React + Remix
+  - Remix for server-side rendering and data loading
+  - React for component-based UI development
+  - TypeScript for type safety
+
+- **UI Components**:
+  - Custom-built core components for the chat interface
+  - shadcn/ui for auxiliary components (buttons, dropdowns, etc.)
+  - Tailwind CSS for styling
+
+- **Data Fetching**:
+  - Remix loaders for server-side data fetching
+  - Client-side fetching for real-time updates
+  - Error boundaries for graceful error handling
+
+- **State Management**:
+  - React Context for global state
+  - Local component state for UI-specific state
+  - Form handling with Remix actions
+
+### Component Architecture
+
+1. **Core Components** (Custom Built):
+   - `ConversationContainer`: Main chat interface
+   - `MessageInput`: Text input with attachment support
+   - `MessageDisplay`: Renders AI and human messages
+   - `ConversationSidebar`: Lists all conversations
+   - `BranchNavigator`: Simple navigation between branches (precursor to Stage 3)
+
+2. **Auxiliary Components** (shadcn/ui):
+   - Buttons, dropdowns, modals
+   - Form elements
+   - Notifications
+   - Loading indicators
+
+### Message Queue System
+
+The message queue system will handle rate limiting and API failures:
+
+1. **Client-side Queue**:
+   - Queue messages when API rate limits are hit
+   - Store queue in localStorage and/or IndexedDB
+   - Attempt to retry with exponential backoff
+
+2. **Server-side Persistence**:
+   - Option to store pending messages in the database
+   - Status indicators for message delivery state
+   - Background processing for queued messages
+
+3. **User Experience**:
+   - Clear status indicators for message state (sending, queued, sent, failed)
+   - Options to cancel queued messages
+   - Estimated wait time display when appropriate
+
+### Streaming Functionality
+
+While not critical for the initial implementation, we will explore adding streaming support:
+
+1. **Backend Integration**:
+   - Adapt the existing Claude service to support streaming responses
+   - Create a streaming-compatible endpoint in our API
+   - Add proper error handling for streaming interruptions
+
+2. **Frontend Implementation**:
+   - Stream messages using Server-Sent Events (SSE) or WebSockets
+   - Progressive rendering of AI responses as they arrive
+   - UI indicators for streaming state (thinking, generating, completed)
+   - Option to interrupt streaming responses
+
+3. **Fallback Mechanism**:
+   - Graceful degradation to non-streaming when not available
+   - Seamless transition between streaming and non-streaming modes
 
 ## Environment Configuration
 

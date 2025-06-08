@@ -6,7 +6,8 @@
     "start": "bun run app.js",
     "dev": "bun --watch run app.js",
     "db:reset": "bun run scripts/reset-db.js",
-    "test": "bun test",
+    "test": "bun test test/basic.test.js test/api.test.js && bun test test/attachment.test.js",
+    "test:attachment": "NODE_ENV=test bun test test/attachment.test.js",
     "test:load": "bun run scripts/run-load-test.js",
     "test:api": "bun run test-api.js"
   },

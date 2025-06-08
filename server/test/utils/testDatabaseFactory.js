@@ -21,6 +21,32 @@ class TestDatabaseFactory {
       onnotice: () => {}, // Ignore notices
     };
   }
+  
+  /**
+   * Creates a manual database connection without the test initialization
+   * Useful for tests that need to preserve data
+   * 
+   * @param {Object} options - Additional options for the connection
+   * @returns {postgres.Sql} - Database connection
+   */
+  createManualConnection(options = {}) {
+    const connectionOptions = {
+      ...this.baseConfig,
+      ...options,
+      onconnect: async () => {
+        console.log(`Manual database connection created for ${options.application_name || 'unknown'}`);
+      },
+      onretry: (err, initial) => {
+        console.warn(`Manual database connection error (${initial ? 'initial' : 'retry'}):`, err.message);
+        return true; // Always retry
+      },
+      onclose: () => {
+        console.log(`Manual database connection closed for ${options.application_name || 'unknown'}`);
+      }
+    };
+    
+    return postgres(connectionOptions);
+  }
 
   /**
    * Creates a dedicated database connection for a test
@@ -84,6 +110,36 @@ class TestDatabaseFactory {
       if (!tablesExist) {
         console.log(`Test database tables don't exist yet for ${testId}, skipping truncation`);
         return;
+      }
+      
+      // Check if the attachments table exists
+      const checkAttachmentsExist = await sql`
+        SELECT EXISTS (
+          SELECT FROM pg_tables 
+          WHERE schemaname = 'public' 
+          AND tablename = 'attachments'
+        ) as attachments_exist
+      `;
+      
+      const attachmentsExist = checkAttachmentsExist[0]?.attachments_exist || false;
+      
+      // If attachments table doesn't exist, create it
+      if (!attachmentsExist) {
+        console.log(`Creating attachments table for ${testId}`);
+        await sql`
+          CREATE TABLE IF NOT EXISTS attachments (
+            uuid UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            message_id UUID NOT NULL REFERENCES messages(uuid),
+            mime_type TEXT,
+            storage TEXT DEFAULT 'local',
+            path TEXT,
+            created_at TIMESTAMP DEFAULT NOW()
+          );
+          
+          CREATE INDEX IF NOT EXISTS idx_attachments_message_id ON attachments(message_id);
+          CREATE INDEX IF NOT EXISTS idx_attachments_storage ON attachments(storage);
+        `;
+        console.log(`Attachments table created for ${testId}`);
       }
       
       // Begin a transaction to isolate changes
@@ -212,16 +268,80 @@ class TestDatabaseFactory {
             // In this case, we accept non-zero exit codes because
             // psql often exits with warnings even when the schema was applied
             console.log(`Schema application completed with code ${code}`);
-            console.log('Test database reset successfully');
             
-            // Clean up the temporary file
-            try {
-              fs.unlinkSync(resetPath);
-            } catch (err) {
-              console.warn('Could not delete temporary SQL file:', err.message);
+            // Now apply the attachments script
+            const attachmentsPath = path.join(process.cwd(), 'scripts', 'attachments.sql');
+            
+            if (fs.existsSync(attachmentsPath)) {
+              console.log('Applying attachments schema to test database...');
+              
+              const psqlAttachments = spawn('psql', [
+                '-U', 'wayne',
+                '-d', 'treechat_test',
+                '-f', attachmentsPath
+              ]);
+              
+              psqlAttachments.stdout.on('data', (data) => {
+                console.log(data.toString());
+              });
+              
+              psqlAttachments.stderr.on('data', (data) => {
+                console.log(data.toString());
+              });
+              
+              psqlAttachments.on('close', (attachCode) => {
+                console.log(`Attachments schema application completed with code ${attachCode}`);
+                console.log('Test database reset successfully');
+                
+                // Clean up the temporary file
+                try {
+                  fs.unlinkSync(resetPath);
+                } catch (err) {
+                  console.warn('Could not delete temporary SQL file:', err.message);
+                }
+                
+                resolve();
+              });
+            } else {
+              console.log('Attachments schema not found, creating default attachments table...');
+              
+              // Create a default attachments table if the script doesn't exist
+              const createAttachmentsSQL = `
+                CREATE TABLE IF NOT EXISTS attachments (
+                  uuid UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                  message_id UUID NOT NULL REFERENCES messages(uuid),
+                  mime_type TEXT,
+                  storage TEXT DEFAULT 'local',
+                  path TEXT,
+                  created_at TIMESTAMP DEFAULT NOW()
+                );
+                CREATE INDEX IF NOT EXISTS idx_attachments_message_id ON attachments(message_id);
+              `;
+              
+              const tempAttachmentsPath = path.join(os.tmpdir(), 'attachments_temp.sql');
+              fs.writeFileSync(tempAttachmentsPath, createAttachmentsSQL);
+              
+              const psqlDefaultAttachments = spawn('psql', [
+                '-U', 'wayne',
+                '-d', 'treechat_test',
+                '-f', tempAttachmentsPath
+              ]);
+              
+              psqlDefaultAttachments.on('close', (defaultAttachCode) => {
+                console.log(`Default attachments table creation completed with code ${defaultAttachCode}`);
+                console.log('Test database reset successfully');
+                
+                // Clean up temporary files
+                try {
+                  fs.unlinkSync(resetPath);
+                  fs.unlinkSync(tempAttachmentsPath);
+                } catch (err) {
+                  console.warn('Could not delete temporary SQL file(s):', err.message);
+                }
+                
+                resolve();
+              });
             }
-            
-            resolve();
           });
         });
       } catch (error) {

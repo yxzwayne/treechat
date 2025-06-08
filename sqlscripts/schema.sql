@@ -28,11 +28,23 @@ CREATE TABLE messages (
     FOREIGN KEY (parent_id) REFERENCES messages(uuid)
 );
 
+-- Attachments table
+CREATE TABLE IF NOT EXISTS attachments (
+    uuid UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    message_id UUID NOT NULL REFERENCES messages(uuid),
+    mime_type TEXT,
+    storage TEXT DEFAULT 'local',
+    path TEXT,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
 -- Indexes
 CREATE INDEX idx_messages_conversation_id ON messages(conversation_id);
 CREATE INDEX idx_messages_parent_id ON messages(parent_id);
 CREATE INDEX idx_messages_created_at ON messages(created_at);
 CREATE INDEX idx_conversations_created_at ON conversations(created_at);
+CREATE INDEX idx_attachments_message_id ON attachments(message_id);
+CREATE INDEX idx_attachments_storage ON attachments(storage);
 
 -- Trigger function for timestamps
 CREATE OR REPLACE FUNCTION update_timestamp()
@@ -51,5 +63,10 @@ EXECUTE FUNCTION update_timestamp();
 
 CREATE TRIGGER update_conversations_timestamp
 BEFORE UPDATE ON conversations
+FOR EACH ROW
+EXECUTE FUNCTION update_timestamp();
+
+CREATE TRIGGER update_attachments_timestamp
+BEFORE UPDATE ON attachments
 FOR EACH ROW
 EXECUTE FUNCTION update_timestamp();
