@@ -1,7 +1,7 @@
-const ConversationModel = require('./conversation');
-const MessageModel = require('./message');
+import ConversationModel from './conversation.js';
+import MessageModel from './message.js';
 
-module.exports = {
+export {
   ConversationModel,
   MessageModel
 };

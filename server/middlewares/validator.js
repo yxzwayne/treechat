@@ -17,6 +17,6 @@ function validateUuid(ctx, next) {
   return next();
 }
 
-module.exports = {
+export {
   validateUuid
 };

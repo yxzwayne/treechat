@@ -1,4 +1,4 @@
-const { ConversationModel, MessageModel } = require('../models');
+import { ConversationModel, MessageModel } from '../models/index.js';
 
 class ConversationService {
   async getConversation(uuid) {
@@ -45,4 +45,4 @@ class ConversationService {
   }
 }
 
-module.exports = new ConversationService();
+export default new ConversationService();

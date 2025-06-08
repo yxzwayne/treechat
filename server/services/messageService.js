@@ -1,5 +1,5 @@
-const { MessageModel } = require('../models');
-const conversationService = require('./conversationService');
+import { MessageModel } from '../models/index.js';
+import conversationService from './conversationService.js';
 
 class MessageService {
   async getMessage(uuid) {
@@ -22,8 +22,13 @@ class MessageService {
   }
 
   async createMessage(messageData) {
-    // Verify conversation exists
-    await conversationService.getConversation(messageData.conversation_id);
+    // if conversation_id is not null, verify conversation exists
+    if (messageData.conversation_id) {
+      await conversationService.getConversation(messageData.conversation_id);
+    } else {
+      // otherwise, it's a new conversation, so we create one first
+      await conversationService.createConversation();
+    }
 
     // If parent_id exists, verify parent message exists
     if (messageData.parent_id) {
@@ -40,4 +45,4 @@ class MessageService {
   }
 }
 
-module.exports = new MessageService();
+export default new MessageService();

@@ -1,7 +1,7 @@
-const ConversationService = require('./conversationService');
-const MessageService = require('./messageService');
+import ConversationService from './conversationService.js';
+import MessageService from './messageService.js';
 
-module.exports = {
+export {
   ConversationService,
   MessageService
 };

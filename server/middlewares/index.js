@@ -1,7 +1,7 @@
-const errorHandler = require('./errorHandler');
-const validator = require('./validator');
+import errorHandler from './errorHandler.js';
+import * as validator from './validator.js';
 
-module.exports = {
+export {
   errorHandler,
   validator
 };

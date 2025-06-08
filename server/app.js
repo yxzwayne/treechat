@@ -1,20 +1,21 @@
-const Koa = require('koa');
-const bodyParser = require('koa-bodyparser');
-const { errorHandler } = require('./middlewares');
-const { conversationRoutes, messageRoutes } = require('./routes');
-const sql = require('./config/database');
+import Koa from 'koa';
+import bodyParser from 'koa-bodyparser';
+import { errorHandler } from './middlewares/index.js';
+import { conversationRoutes, messageRoutes } from './routes/index.js';
+import sql from './config/database.js';
 
 const app = new Koa();
 
-// Add error event listener
 app.on('error', (err, ctx) => {
   console.error('Server error:', err);
 });
 
-// Add basic health check endpoint
 app.use(async (ctx, next) => {
   if (ctx.path === '/health') {
     ctx.body = { status: 'ok', time: new Date().toISOString() };
+    return;
+  } else if (ctx.path === '/') {
+    ctx.body = 'Hello Treechat';
     return;
   }
   await next();
@@ -47,4 +48,4 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
-module.exports = { app, sql };
+export { app, sql };

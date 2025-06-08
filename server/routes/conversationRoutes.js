@@ -1,6 +1,6 @@
-const Router = require('@koa/router');
-const conversationController = require('../controllers/conversationController.js');
-const { validator } = require('../middlewares');
+import Router from '@koa/router';
+import conversationController from '../controllers/conversationController.js';
+import { validator } from '../middlewares/index.js';
 
 const router = new Router({ prefix: '/api/conversations' });
 
@@ -10,4 +10,4 @@ router.get('/:uuid', validator.validateUuid, conversationController.getConversat
 router.get('/:uuid/messages', validator.validateUuid, conversationController.getConversationWithMessages.bind(conversationController));
 router.put('/:uuid', validator.validateUuid, conversationController.updateConversation.bind(conversationController));
 
-module.exports = router;
+export default router;

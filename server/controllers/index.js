@@ -1,7 +1,7 @@
-const ConversationController = require('./conversationController');
-const MessageController = require('./messageController');
+import ConversationController from './conversationController.js';
+import MessageController from './messageController.js';
 
-module.exports = {
+export {
   ConversationController,
   MessageController
 };

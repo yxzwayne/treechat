@@ -1,4 +1,4 @@
-const sql = require('../config/database');
+import sql from '../config/database.js';
 
 class MessageModel {
   async findByUuid(uuid) {
@@ -33,4 +33,4 @@ class MessageModel {
   }
 }
 
-module.exports = new MessageModel();
+export default new MessageModel();

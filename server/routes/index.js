@@ -1,7 +1,7 @@
-const conversationRoutes = require('./conversationRoutes');
-const messageRoutes = require('./messageRoutes');
+import conversationRoutes from './conversationRoutes.js';
+import messageRoutes from './messageRoutes.js';
 
-module.exports = {
+export {
   conversationRoutes,
   messageRoutes
 };

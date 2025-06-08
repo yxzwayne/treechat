@@ -1,4 +1,4 @@
-const { MessageService } = require('../services');
+import { MessageService } from '../services/index.js';
 
 class MessageController {
   async getMessage(ctx) {
@@ -21,4 +21,4 @@ class MessageController {
   }
 }
 
-module.exports = new MessageController();
+export default new MessageController();

@@ -1,10 +1,12 @@
-const postgres = require('postgres');
+import postgres from 'postgres';
 
+// Create a SQL instance
 const sql = postgres({
   host: 'localhost',
-  user: 'wayne',  // Changed from username to user
+  user: 'wayne',
   database: 'treechat',
   port: 5432,
+  onnotice: () => {} // Ignore notices
 });
 
-module.exports = sql;
+export default sql;

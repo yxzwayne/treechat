@@ -1,4 +1,4 @@
-const { ConversationService } = require('../services');
+import { ConversationService } from '../services/index.js';
 
 class ConversationController {
   async getConversation(ctx) {
@@ -35,4 +35,4 @@ class ConversationController {
   }
 }
 
-module.exports = new ConversationController();
+export default new ConversationController();

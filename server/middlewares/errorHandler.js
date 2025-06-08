@@ -13,4 +13,4 @@ async function errorHandler(ctx, next) {
   }
 }
 
-module.exports = errorHandler;
+export default errorHandler;
