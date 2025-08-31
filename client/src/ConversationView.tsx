@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useConversation, pathToRoot, freshState } from './state'
 import { Role } from './types'
 import MessageNode from './components/MessageNode'
 import Sidebar from './components/Sidebar'
+import LeftSidebar from './components/LeftSidebar'
 import { streamChat, createConversation, saveSnapshot, loadConversation, upsertMessage, deleteMessage } from './lib/api'
 import { startAutoFlush } from './lib/sync'
 import Composer from './components/Composer'
@@ -15,6 +16,10 @@ export default function ConversationView() {
   const [model, setModel] = useState('gpt-5-mini')
   const root = useMemo(() => state.nodes[state.rootId], [state])
   const [conversationId, setConversationId] = useState<string | null>(() => (id ? String(id) : null))
+  const controllers = useRef<Map<string, AbortController>>(new Map())
+  const [toast, setToast] = useState<string | null>(null)
+  // One-shot flag to prevent wiping in-memory state right after creating a conversation
+  const suppressNextLoad = useRef(false)
 
   useEffect(() => {
     startAutoFlush()
@@ -24,6 +29,12 @@ export default function ConversationView() {
   useEffect(() => {
     (async () => {
       if (id) {
+        // If we just created a conversation and navigated to it, keep current in-memory streaming state
+        if (suppressNextLoad.current) {
+          setConversationId(String(id))
+          suppressNextLoad.current = false
+          return
+        }
         try {
           const snap = await loadConversation(id)
           if (snap && snap.rootId && snap.nodes) {
@@ -55,6 +66,8 @@ export default function ConversationView() {
         await saveSnapshot(convId, { nodes: Object.values(state.nodes), rootId: state.rootId })
       } catch {}
       // Navigate to the conversation route
+      // Suppress the next loader-triggered state replace so streaming UI isn't wiped
+      suppressNextLoad.current = true
       navigate(`/c/${convId}`)
     }
     const userId = crypto.randomUUID()
@@ -70,11 +83,22 @@ export default function ConversationView() {
     const messages = pathToRoot(state, parentAssistantId)
       .map(m => ({ role: m.role as Role, content: m.content }))
       .concat([{ role: 'user' as Role, content: t }])
+    const ac = new AbortController()
+    controllers.current.set(assistantId, ac)
     try {
-      await streamChat(model, messages, (delta) => dispatch({ type: 'append_assistant', id: assistantId, delta }), { conversationId: convId ?? undefined, assistantExternalId: assistantId })
+      await streamChat(
+        model,
+        messages,
+        (delta) => dispatch({ type: 'append_assistant', id: assistantId, delta }),
+        { conversationId: convId ?? undefined, assistantExternalId: assistantId, signal: ac.signal }
+      )
       dispatch({ type: 'finalize_assistant', id: assistantId })
     } catch (e: any) {
-      dispatch({ type: 'append_assistant', id: assistantId, delta: `\n[Error: ${e.message}]` })
+      if (!(e?.name === 'AbortError' || /aborted/i.test(String(e?.message)))) {
+        dispatch({ type: 'append_assistant', id: assistantId, delta: `\n[Error: ${e.message}]` })
+      }
+    } finally {
+      controllers.current.delete(assistantId)
     }
   }
 
@@ -85,11 +109,22 @@ export default function ConversationView() {
       try { await upsertMessage(conversationId, { external_id: assistantId, parent_external_id: userNodeId, role: 'assistant', content: '', model, created_ts: Date.now() }) } catch {}
     }
     const messages = pathToRoot(state, userNodeId).map(m => ({ role: m.role as Role, content: m.content }))
+    const ac = new AbortController()
+    controllers.current.set(assistantId, ac)
     try {
-      await streamChat(model, messages, (delta) => dispatch({ type: 'append_assistant', id: assistantId, delta }), { conversationId: conversationId ?? undefined, assistantExternalId: assistantId })
+      await streamChat(
+        model,
+        messages,
+        (delta) => dispatch({ type: 'append_assistant', id: assistantId, delta }),
+        { conversationId: conversationId ?? undefined, assistantExternalId: assistantId, signal: ac.signal }
+      )
       dispatch({ type: 'finalize_assistant', id: assistantId })
     } catch (e: any) {
-      dispatch({ type: 'append_assistant', id: assistantId, delta: `\n[Error: ${e.message}]` })
+      if (!(e?.name === 'AbortError' || /aborted/i.test(String(e?.message)))) {
+        dispatch({ type: 'append_assistant', id: assistantId, delta: `\n[Error: ${e.message}]` })
+      }
+    } finally {
+      controllers.current.delete(assistantId)
     }
   }
 
@@ -109,30 +144,68 @@ export default function ConversationView() {
       .slice(0, -1) // up to original's parent
       .map(m => ({ role: m.role as Role, content: m.content }))
       .concat([{ role: 'user' as Role, content: newContent }])
+    const ac = new AbortController()
+    controllers.current.set(assistantId, ac)
     try {
-      await streamChat(model, messages, (delta) => dispatch({ type: 'append_assistant', id: assistantId, delta }), { conversationId: conversationId ?? undefined, assistantExternalId: assistantId })
+      await streamChat(
+        model,
+        messages,
+        (delta) => dispatch({ type: 'append_assistant', id: assistantId, delta }),
+        { conversationId: conversationId ?? undefined, assistantExternalId: assistantId, signal: ac.signal }
+      )
       dispatch({ type: 'finalize_assistant', id: assistantId })
     } catch (e: any) {
-      dispatch({ type: 'append_assistant', id: assistantId, delta: `\n[Error: ${e.message}]` })
+      if (!(e?.name === 'AbortError' || /aborted/i.test(String(e?.message)))) {
+        dispatch({ type: 'append_assistant', id: assistantId, delta: `\n[Error: ${e.message}]` })
+      }
+    } finally {
+      controllers.current.delete(assistantId)
     }
   }
 
+  function collectSubtreeIds(startId: string): string[] {
+    const seen = new Set<string>()
+    const out: string[] = []
+    const stack = [startId]
+    while (stack.length) {
+      const id = stack.pop()!
+      if (seen.has(id)) continue
+      seen.add(id)
+      out.push(id)
+      const n = state.nodes[id]
+      if (n) for (const c of n.children) stack.push(c)
+    }
+    return out
+  }
+
   async function handleDelete(nodeId: string) {
-    // Optimistic: update UI immediately
+    // Abort any in-flight assistant stream within this subtree
+    const ids = collectSubtreeIds(nodeId)
+    for (const id of ids) {
+      const ac = controllers.current.get(id)
+      if (ac) {
+        try { ac.abort() } catch {}
+        controllers.current.delete(id)
+      }
+    }
+    // Optimistic UI update
     dispatch({ type: 'delete_subtree', nodeId })
     if (conversationId) {
-      try { await deleteMessage(conversationId, nodeId) } catch {
-        // ignore failures for now; UI remains consistent with local state
+      try {
+        await deleteMessage(conversationId, nodeId)
+      } catch (e: any) {
+        setToast(`Delete failed: ${e?.message || 'server error'}`)
+        setTimeout(() => setToast(null), 3000)
       }
     }
   }
 
   return (
     <div className="app-shell">
-      <div className="header">
-        <div className="title">TREECHAT</div>
-      </div>
       <div className="container">
+        <div className="left-pane">
+          <LeftSidebar />
+        </div>
         <div className="tree-pane">
           {root.children.length === 0 ? (
             <>
@@ -159,12 +232,30 @@ export default function ConversationView() {
         <div className="side-pane">
           <Sidebar
             state={state}
-            onSetSystem={(c) => dispatch({ type: 'set_system', content: c })}
+            onSetSystem={async (c) => {
+              // Update local state immediately
+              dispatch({ type: 'set_system', content: c })
+              // If this conversation already exists, persist the root system message
+              if (conversationId) {
+                try {
+                  await upsertMessage(conversationId, {
+                    external_id: state.rootId,
+                    parent_external_id: null,
+                    role: 'system',
+                    content: c,
+                    created_ts: Date.now(),
+                  })
+                } catch {}
+              }
+            }}
             model={model}
             onSetModel={setModel}
           />
         </div>
       </div>
+      {toast && (
+        <div className="toast">{toast}</div>
+      )}
     </div>
   )
 }

@@ -1,11 +1,15 @@
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { ConversationState } from '../types'
 
 export default function Sidebar({ state, onSetSystem, model, onSetModel }: { state: ConversationState, onSetSystem: (c: string) => void, model: string, onSetModel: (m: string) => void }) {
-  const count = Object.keys(state.nodes).length
+  const count = Object.keys(state.nodes).length - 1
   const sys = state.nodes[state.rootId]
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(sys.content)
+  // Collapse long system prompts by default
+  const COLLAPSE_THRESHOLD = 200
+  const isLong = useMemo(() => (sys.content || '').length > COLLAPSE_THRESHOLD, [sys.content])
+  const [collapsed, setCollapsed] = useState(true)
   return (
     <div>
       <div style={{ marginBottom: 12 }}>
@@ -21,7 +25,12 @@ export default function Sidebar({ state, onSetSystem, model, onSetModel }: { sta
         <div>Selected: {state.selectedLeafId}</div>
       </div>
       <div style={{ marginBottom: 12 }}>
-        <div className="mono" style={{ color: '#9aa0ab' }}>SYSTEM PROMPT</div>
+        <div className="mono" style={{ color: '#9aa0ab', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <div>SYSTEM PROMPT</div>
+          {!editing && isLong && (
+            <button className="button ghost small" onClick={() => setCollapsed(c => !c)}>{collapsed ? 'SHOW MORE' : 'SHOW LESS'}</button>
+          )}
+        </div>
         <div className="node-card node-system" style={{ marginTop: 6 }}>
           {editing ? (
             <div>
@@ -32,7 +41,9 @@ export default function Sidebar({ state, onSetSystem, model, onSetModel }: { sta
               </div>
             </div>
           ) : (
-            <div style={{ whiteSpace: 'pre-wrap' }}>{sys.content || <span style={{ color: '#666' }}>(empty)</span>}</div>
+            <div style={{ whiteSpace: 'pre-wrap', ...(isLong && collapsed ? { maxHeight: 160, overflow: 'hidden' } : {}) }}>
+              {sys.content || <span style={{ color: '#666' }}>(empty)</span>}
+            </div>
           )}
         </div>
         {!editing && (

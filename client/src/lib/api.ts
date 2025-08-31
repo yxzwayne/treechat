@@ -1,10 +1,16 @@
 import { Role } from '../types'
 
-export async function streamChat(model: string, messages: { role: Role; content: string }[], onDelta: (t: string) => void, opts?: { conversationId?: string, assistantExternalId?: string }) {
+export async function streamChat(
+  model: string,
+  messages: { role: Role; content: string }[],
+  onDelta: (t: string) => void,
+  opts?: { conversationId?: string, assistantExternalId?: string, signal?: AbortSignal }
+) {
   const res = await fetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model, messages, conversationId: opts?.conversationId, assistantExternalId: opts?.assistantExternalId })
+    body: JSON.stringify({ model, messages, conversationId: opts?.conversationId, assistantExternalId: opts?.assistantExternalId }),
+    signal: opts?.signal
   })
   if (!res.ok) {
     const text = await res.text().catch(() => '')
@@ -75,4 +81,14 @@ export async function deleteMessage(conversationId: string, externalId: string):
     const t = await res.text().catch(() => '')
     throw new Error(`Failed to delete message: ${t}`)
   }
+}
+
+export type ConversationListItem = { id: string, preview: string }
+export async function listConversations(): Promise<ConversationListItem[]> {
+  const res = await fetch('/api/conversations')
+  if (!res.ok) {
+    const t = await res.text().catch(() => '')
+    throw new Error(`Failed to list conversations: ${t}`)
+  }
+  return res.json()
 }

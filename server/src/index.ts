@@ -363,6 +363,31 @@ app.get('/api/conversations/latest', async (_req: Request, res: Response) => {
   }
 })
 
+// List conversations with a short preview (first 30 chars of concatenated text)
+app.get('/api/conversations', async (_req: Request, res: Response) => {
+  try {
+    const pool = getPool()
+    const r = await pool.query(
+      `with previews as (
+         select c.uuid as id,
+                coalesce(substring((
+                  select string_agg(coalesce(m.text, ''), ' ' order by m.created_ts asc, m.created_at asc)
+                  from messages m
+                  where m.conversation_id = c.uuid
+                ) from 1 for 30), '') as preview
+           from conversations c
+       )
+       select id, preview
+         from previews
+        order by (select updated_at from conversations where uuid = id) desc, id desc`
+    )
+    const out = r.rows.map(row => ({ id: String(row.id), preview: String(row.preview || '') }))
+    res.json(out)
+  } catch (e: any) {
+    res.status(500).json({ error: e?.message || 'db error' })
+  }
+})
+
 ensureSchema().then(() => {
   app.listen(PORT, () => {
     console.log(`[server] listening on http://localhost:${PORT}`)
