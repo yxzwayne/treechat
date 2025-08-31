@@ -1,0 +1,95 @@
+@font-face {
+  font-family: "Berkeley Mono";
+  src: url("../assets/fonts/Berkeley Mono/BerkeleyMono-Light-SemiCondensed.ttf") format("truetype");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Berkeley Mono";
+  src: url("../assets/fonts/Berkeley Mono/BerkeleyMono-SemiCondensed.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Berkeley Mono";
+  src: url("../assets/fonts/Berkeley Mono/BerkeleyMono-Medium-SemiCondensed.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Berkeley Mono";
+  src: url("../assets/fonts/Berkeley Mono/BerkeleyMono-SemiBold-SemiCondensed.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Berkeley Mono";
+  src: url("../assets/fonts/Berkeley Mono/BerkeleyMono-Bold-SemiCondensed.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --bg: #0b0c0f;
+  --panel: #12141a;
+  --card: #161922;
+  --text: #e6e8ef;
+  --muted: #9aa0ab;
+  --accent: #1ca7ea;
+  --border: #242938;
+  --col-w: 720px;
+}
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: "Berkeley Mono", monospace; }
+
+.app-shell { display: grid; grid-template-rows: auto 1fr auto; height: 100%; }
+.header { padding: 10px 16px; border-bottom: 1px solid var(--border); background: var(--panel); display: flex; justify-content: space-between; align-items: center; }
+.title { font-weight: 600; font-style: italic; font-size: 1.4rem; }
+.container { display: grid; grid-template-columns: 1fr 360px; gap: 8px; height: 100%; }
+.tree-pane { overflow: auto; padding: 12px; }
+.side-pane { border-left: 1px solid var(--border); background: var(--panel); padding: 12px; overflow: auto; }
+
+.node-card { background: var(--card); border: 1px solid var(--border); border-radius: 0px; padding: 10px; width: 100%;}
+.node-user { border-left: 4px solid #0042ff; }
+.node-assistant { border-left: 4px solid #1ca7ea; }
+.node-system { border-left: 4px solid #ffb86b; }
+.node-header { font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.node-content { white-space: pre-wrap; font-size: 15px; }
+
+.children-row { display: flex; gap: 12px; align-items: flex-start; margin-left: 0; margin-top: 12px; }
+.column { width: var(--col-w); flex: 0 0 var(--col-w); display: flex; flex-direction: column; gap: 8px; }
+
+.controls { display: flex; gap: 8px; align-items: center; }
+.button { background: #1f2432; color: var(--text); border: 1px solid var(--border); padding: 6px 12px; border-radius: 2px; cursor: pointer; font-family: "Berkeley Mono", monospace; font-size: 14px; }
+.button:hover { background: #23293a; }
+.button.ghost { background: transparent; }
+.button.accent { background: var(--accent); color: black; border: none; }
+.button.pale { background: #203041; color: #d7eaff; border: 1px solid #27445f; }
+.button.pale:hover { background: #25455f; }
+.button.danger { background: #c62828; color: #fff; border: 1px solid #9a1e1e; }
+.button.danger:hover { background: #b71c1c; }
+.icon-button { background: transparent; border: none; padding: 4px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.icon-button:hover svg path { stroke: #c1c7d0; }
+
+.text-input, .composer .ta { width: 100%; padding: 10px; border: 1px solid var(--border); background: #0f1117; color: var(--text); }
+.text-input { flex: 1; max-width: 100%; border-radius: 8px; display: block; box-sizing: border-box; }
+.node-card textarea.text-input { resize: none; overflow: auto; font-size: 14px; font-family: "Berkeley Mono", monospace; }
+
+/* .active { outline: 1px dashed var(--accent); } */
+
+.mono { font-family: "Berkeley Mono", monospace; }
+
+.composer { margin-top: 8px; }
+.composer .ta { resize: none; overflow: hidden; font-size: 15px; font-family: "Berkeley Mono", monospace; }
+.composer .row { display: flex; gap: 8px; margin-top: 6px; justify-content: flex-end; }
+
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.modal { background: #141924; border: 1px solid var(--border); width: 560px; max-width: 90vw; padding: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+.modal-body { color: #cfd3dc; font-size: 15px; }
+.modal-actions { margin-top: 12px; display: flex; gap: 8px; justify-content: flex-end; }
