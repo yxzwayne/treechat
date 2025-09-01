@@ -13,7 +13,6 @@ export default function Sidebar({ state, onSetSystem, model, onSetModel, onClose
   return (
     <div>
       <div style={{ color: '#9aa0ab', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
-        <div>TOOLS</div>
         <button
           className="sidepanel-toggle-btn"
           onClick={onClose}
@@ -26,9 +25,11 @@ export default function Sidebar({ state, onSetSystem, model, onSetModel, onClose
             <path d="m8 9 3 3-3 3"/>
           </svg>
         </button>
+        <div style={{ color: "#ddd", fontWeight: "600" }}>SETTINGS</div>
       </div>
       <div style={{ marginBottom: 12 }}>
         <div style={{ color: '#9aa0ab' }}>MODEL</div>
+        <p style={{ fontSize: "14px"}}>NEW MESSAGES USES THIS MODEL BY DEFAULT IF NOT SPECIFIED.</p>
         <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
           <input className="text-input" style={{ fontFamily: "Berkeley Mono, monospace",  width: "100%" }} value={model} onChange={e => onSetModel(e.target.value)} />
         </div>

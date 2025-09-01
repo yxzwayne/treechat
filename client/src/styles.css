@@ -200,7 +200,7 @@ body { margin: 0; background: var(--bg); color: var(--text); font-family: "Berke
   justify-content: space-between;
   padding: 0 12px;
   background: transparent;
-  border-bottom: 1px solid var(--border);
+  border: none;
   z-index: 1000;
   /* Let clicks pass through except on explicit controls */
   pointer-events: none;
