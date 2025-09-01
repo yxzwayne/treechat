@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { ConversationState } from '../types'
 
-export default function Sidebar({ state, onSetSystem, model, onSetModel }: { state: ConversationState, onSetSystem: (c: string) => void, model: string, onSetModel: (m: string) => void }) {
+export default function Sidebar({ state, onSetSystem, model, onSetModel, onClose }: { state: ConversationState, onSetSystem: (c: string) => void, model: string, onSetModel: (m: string) => void, onClose: () => void }) {
   const count = Object.keys(state.nodes).length - 1
   const sys = state.nodes[state.rootId]
   const [editing, setEditing] = useState(false)
@@ -12,20 +12,24 @@ export default function Sidebar({ state, onSetSystem, model, onSetModel }: { sta
   const [collapsed, setCollapsed] = useState(true)
   return (
     <div>
+      <div style={{ color: '#9aa0ab', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
+        <div>TOOLS</div>
+        <button className="button ghost" onClick={onClose}>HIDE</button>
+      </div>
       <div style={{ marginBottom: 12 }}>
-        <div className="mono" style={{ color: '#9aa0ab' }}>MODEL</div>
+        <div style={{ color: '#9aa0ab' }}>MODEL</div>
         <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
-          <input className="text-input" style={{ width: "100%" }} value={model} onChange={e => onSetModel(e.target.value)} />
+          <input className="text-input" style={{ fontFamily: "Berkeley Mono, monospace",  width: "100%" }} value={model} onChange={e => onSetModel(e.target.value)} />
         </div>
       </div>
       {null}
       <div style={{ marginBottom: 12 }}>
-        <div className="mono" style={{ color: '#9aa0ab' }}>STATS</div>
+        <div style={{ color: '#9aa0ab' }}>STATS</div>
         <div>Total nodes: {count}</div>
         <div>Selected: {state.selectedLeafId}</div>
       </div>
       <div style={{ marginBottom: 12 }}>
-        <div className="mono" style={{ color: '#9aa0ab', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <div style={{ color: '#9aa0ab', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
           <div>SYSTEM PROMPT</div>
           {!editing && isLong && (
             <button className="button ghost small" onClick={() => setCollapsed(c => !c)}>{collapsed ? 'SHOW MORE' : 'SHOW LESS'}</button>
@@ -53,11 +57,9 @@ export default function Sidebar({ state, onSetSystem, model, onSetModel }: { sta
         )}
       </div>
       <div style={{ marginTop: 12 }}>
-        <div className="mono" style={{ color: '#9aa0ab' }}>TIPS</div>
-        <ul>
-          <li>Edit a user node to branch.</li>
-          <li>Retry on a user node creates sibling answers.</li>
-        </ul>
+        <div style={{ color: '#9aa0ab' }}>TIPS</div>
+          <p>To branch, edit a user message or retry an AI response.</p>
+          <p>You can delete </p>
       </div>
     </div>
   )

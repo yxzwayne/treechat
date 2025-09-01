@@ -51,7 +51,7 @@ body { margin: 0; background: var(--bg); color: var(--text); font-family: "Berke
 
 .app-shell { display: grid; grid-template-rows: 1fr; height: 100%; }
 /* header removed */
-.title { font-weight: 600; font-style: italic; font-size: 1.4rem; }
+.title { font-weight: 600; font-style: italic; font-size: 1.4rem; margin-bottom: 0.5rem;}
 .container { display: block; height: 100%; }
 .left-pane { position: fixed; top: 0; bottom: 0; left: 0; width: var(--sidebar-w); border-right: 1px solid var(--border); background: var(--panel); padding: 12px; overflow: auto; }
 .tree-pane { height: 100%; overflow: auto; padding: 12px; margin-left: var(--sidebar-w); margin-right: var(--sidebar-w); }
@@ -100,6 +100,14 @@ body { margin: 0; background: var(--bg); color: var(--text); font-family: "Berke
 .toast { position: fixed; right: 16px; top: 16px; background: #1b2130; color: #e6e8ef; border: 1px solid #2a3246; padding: 8px 12px; border-radius: 4px; box-shadow: 0 6px 20px rgba(0,0,0,0.4); z-index: 2000; font-size: 13px; }
 
 /* Left sidebar chat items */
-.chat-item { text-align: left; padding: 8px 10px; border: 1px solid transparent; background: transparent; color: var(--text); cursor: pointer; font-family: "Berkeley Mono", monospace; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.chat-item:hover { background: #141822; border-color: #1f2535; }
-.chat-item.active { background: #182036; border-color: #283556; }
+.chat-item { text-align: left; color: var(--text); font-family: "Berkeley Mono", monospace; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
+.chat-row { display: flex; align-items: center; gap: 6px; padding: 8px 8px 8px 10px; border: 1px solid transparent; border-radius: 2px; cursor: pointer; transition: background-color 0.12s ease, border-color 0.12s ease; }
+.chat-row:hover { background: #141822; border-color: #1f2535; }
+.chat-row.active { background: #182036; border-color: #283556; }
+.chat-row .chat-delete { opacity: 0; transition: opacity 0.12s ease-in-out; }
+.chat-row:hover .chat-delete { opacity: 1; }
+
+/* Floating toggles for sidebars */
+.floating-toggle { position: fixed; top: 10px; z-index: 1500; box-shadow: 0 4px 14px rgba(0,0,0,0.4); }
+.floating-toggle.left { left: 10px; }
+.floating-toggle.right { right: 10px; }

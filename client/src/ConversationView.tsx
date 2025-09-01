@@ -18,6 +18,8 @@ export default function ConversationView() {
   const [conversationId, setConversationId] = useState<string | null>(() => (id ? String(id) : null))
   const controllers = useRef<Map<string, AbortController>>(new Map())
   const [toast, setToast] = useState<string | null>(null)
+  const [leftOpen, setLeftOpen] = useState(true)
+  const [rightOpen, setRightOpen] = useState(true)
   // One-shot flag to prevent wiping in-memory state right after creating a conversation
   const suppressNextLoad = useRef(false)
 
@@ -203,10 +205,25 @@ export default function ConversationView() {
   return (
     <div className="app-shell">
       <div className="container">
-        <div className="left-pane">
-          <LeftSidebar />
-        </div>
-        <div className="tree-pane">
+        {leftOpen && (
+          <div className="left-pane">
+            <LeftSidebar onClose={() => setLeftOpen(false)} />
+          </div>
+        )}
+        {!leftOpen && (
+          <button
+            className="floating-toggle left button"
+            onClick={() => setLeftOpen(true)}
+            aria-label="Open left sidebar"
+            title="Open left sidebar"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-tree-pine-icon lucide-tree-pine">
+              <path d="m17 14 3 3.3a1 1 0 0 1-.7 1.7H4.7a1 1 0 0 1-.7-1.7L7 14h-.3a1 1 0 0 1-.7-1.7L9 9h-.2A1 1 0 0 1 8 7.3L12 3l4 4.3a1 1 0 0 1-.8 1.7H15l3 3.3a1 1 0 0 1-.7 1.7H17Z"/>
+              <path d="M12 22v-3"/>
+            </svg>
+          </button>
+        )}
+        <div className="tree-pane" style={{ marginLeft: leftOpen ? 'var(--sidebar-w)' as any : 0, marginRight: rightOpen ? 'var(--sidebar-w)' as any : 0 }}>
           {root.children.length === 0 ? (
             <>
               <div className="node-card">
@@ -229,8 +246,9 @@ export default function ConversationView() {
             </div>
           )}
         </div>
-        <div className="side-pane">
-          <Sidebar
+        {rightOpen && (
+          <div className="side-pane">
+            <Sidebar
             state={state}
             onSetSystem={async (c) => {
               // Update local state immediately
@@ -250,8 +268,35 @@ export default function ConversationView() {
             }}
             model={model}
             onSetModel={setModel}
+            onClose={() => setRightOpen(false)}
           />
-        </div>
+          </div>
+        )}
+        {!rightOpen && (
+          <button
+            className="floating-toggle right button"
+            onClick={() => setRightOpen(true)}
+            aria-label="Open right sidebar"
+            title="Open right sidebar"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-cog-icon lucide-cog">
+              <path d="M11 10.27 7 3.34"/>
+              <path d="m11 13.73-4 6.93"/>
+              <path d="M12 22v-2"/>
+              <path d="M12 2v2"/>
+              <path d="M14 12h8"/>
+              <path d="m17 20.66-1-1.73"/>
+              <path d="m17 3.34-1 1.73"/>
+              <path d="M2 12h2"/>
+              <path d="m20.66 17-1.73-1"/>
+              <path d="m20.66 7-1.73 1"/>
+              <path d="m3.34 17 1.73-1"/>
+              <path d="m3.34 7 1.73 1"/>
+              <circle cx="12" cy="12" r="2"/>
+              <circle cx="12" cy="12" r="8"/>
+            </svg>
+          </button>
+        )}
       </div>
       {toast && (
         <div className="toast">{toast}</div>

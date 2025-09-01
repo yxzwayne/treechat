@@ -388,6 +388,18 @@ app.get('/api/conversations', async (_req: Request, res: Response) => {
   }
 })
 
+// Delete a whole conversation (cascades to messages)
+app.delete('/api/conversations/:id', async (req: Request, res: Response) => {
+  const convId = String(req.params.id)
+  try {
+    const pool = getPool()
+    await pool.query('delete from conversations where uuid = $1::uuid', [convId])
+    res.json({ ok: true })
+  } catch (e: any) {
+    res.status(500).json({ error: e?.message || 'db error' })
+  }
+})
+
 ensureSchema().then(() => {
   app.listen(PORT, () => {
     console.log(`[server] listening on http://localhost:${PORT}`)

@@ -92,3 +92,11 @@ export async function listConversations(): Promise<ConversationListItem[]> {
   }
   return res.json()
 }
+
+export async function deleteConversation(id: string): Promise<void> {
+  const res = await fetch(`/api/conversations/${id}`, { method: 'DELETE' })
+  if (!res.ok) {
+    const t = await res.text().catch(() => '')
+    throw new Error(`Failed to delete conversation: ${t}`)
+  }
+}

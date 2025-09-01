@@ -61,12 +61,15 @@ export async function ensureSchema() {
     end if;
   end $$;
 
-  -- Add FK constraint for conversation_id if missing
+  -- Ensure FK exists with ON DELETE CASCADE (drop and recreate to enforce policy)
   do $$ begin
+    begin
+      alter table messages drop constraint if exists messages_conversation_id_fkey;
+    exception when undefined_object then null; end;
     alter table messages
       add constraint messages_conversation_id_fkey
       foreign key (conversation_id) references conversations(uuid) on delete cascade;
-  exception when duplicate_object then null; end $$;
+  end $$;
 
   -- Set NOT NULL on conversation_id only if no nulls remain
   do $$ begin
