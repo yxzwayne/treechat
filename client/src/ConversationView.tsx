@@ -247,19 +247,32 @@ export default function ConversationView() {
     <div className="app-shell">
       <div className="container" style={{ ['--col-w' as any]: `${columnWidth}px` }}>
         <div className="top-bar">
-          <div>
+          <div style={{ display: 'flex', gap: 8 }}>
             {!leftOpen && (
-              <button
-                className="sidepanel-toggle-btn"
-                onClick={() => setLeftOpen(true)}
-                aria-label="Open left sidebar"
-                title="Open left sidebar"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-tree-pine-icon lucide-tree-pine">
-                  <path d="m17 14 3 3.3a1 1 0 0 1-.7 1.7H4.7a1 1 0 0 1-.7-1.7L7 14h-.3a1 1 0 0 1-.7-1.7L9 9h-.2A1 1 0 0 1 8 7.3L12 3l4 4.3a1 1 0 0 1-.8 1.7H15l3 3.3a1 1 0 0 1-.7 1.7H17Z"/>
-                  <path d="M12 22v-3"/>
-                </svg>
-              </button>
+              <>
+                <button
+                  className="sidepanel-toggle-btn"
+                  onClick={() => setLeftOpen(true)}
+                  aria-label="Open left sidebar"
+                  title="Open left sidebar"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-tree-pine-icon lucide-tree-pine">
+                    <path d="m17 14 3 3.3a1 1 0 0 1-.7 1.7H4.7a1 1 0 0 1-.7-1.7L7 14h-.3a1 1 0 0 1-.7-1.7L9 9h-.2A1 1 0 0 1 8 7.3L12 3l4 4.3a1 1 0 0 1-.8 1.7H15l3 3.3a1 1 0 0 1-.7 1.7H17Z"/>
+                    <path d="M12 22v-3"/>
+                  </svg>
+                </button>
+                <button
+                  className="sidepanel-toggle-btn"
+                  onClick={() => navigate('/')}
+                  aria-label="Create new chat"
+                  title="Create new chat"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-square-pen-icon lucide-square-pen">
+                    <path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/>
+                  </svg>
+                </button>
+              </>
             )}
           </div>
           <div>

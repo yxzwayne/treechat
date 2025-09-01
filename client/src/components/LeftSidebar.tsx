@@ -53,6 +53,19 @@ export default function LeftSidebar({ onClose }: { onClose: () => void }) {
           </svg>
         </button>
       </div>
+      <div style={{ marginBottom: 8 }}>
+        <button
+          className="sidepanel-toggle-btn"
+          onClick={() => navigate('/')}
+          aria-label="Create new chat"
+          title="Create new chat"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-square-pen-icon lucide-square-pen">
+            <path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/>
+          </svg>
+        </button>
+      </div>
       <div className="mono" style={{ color: '#9aa0ab', marginBottom: 8 }}>HISTORY</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         {items.map(it => (
