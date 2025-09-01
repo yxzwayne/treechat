@@ -116,12 +116,55 @@ body { margin: 0; background: var(--bg); color: var(--text); font-family: "Berke
 .toast { position: fixed; right: 16px; top: 16px; background: #1b2130; color: #e6e8ef; border: 1px solid #2a3246; padding: 8px 12px; border-radius: 4px; box-shadow: 0 6px 20px rgba(0,0,0,0.4); z-index: 2000; font-size: 13px; }
 
 /* Left sidebar chat items */
-.chat-item { text-align: left; color: var(--text); font-family: "Berkeley Mono", monospace; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
+.chat-item { text-align: left; color: var(--text); font-family: "Berkeley Mono", monospace; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; position: relative; }
 .chat-row { display: flex; align-items: center; gap: 6px; padding: 8px 8px 8px 10px; border: 1px solid transparent; border-radius: 2px; cursor: pointer; transition: background-color 0.12s ease, border-color 0.12s ease; }
 .chat-row:hover { background: #141822; border-color: #1f2535; }
 .chat-row.active { background: #182036; border-color: #283556; }
 .chat-row .chat-delete { opacity: 0; transition: opacity 0.12s ease-in-out; }
 .chat-row:hover .chat-delete { opacity: 1; }
+/* Show edit icon only on hover, like delete */
+.chat-row .chat-edit { opacity: 0; transition: opacity 0.12s ease-in-out; }
+.chat-row:hover .chat-edit { opacity: 1; }
+/* Match edit icon default color to trash bin */
+.chat-row .chat-edit { color: #9aa0ab; }
+/* Base color for save (tick) and cancel (cross) icons */
+.chat-row .chat-save, .chat-row .chat-cancel { color: #9aa0ab; }
+
+/* Edit summary textarea */
+.edit-summary {
+  width: 100%;
+  resize: none;
+  font-size: 13px; /* Match .chat-item to avoid height change */
+  font-family: "Berkeley Mono", monospace;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--text);
+  line-height: 1.2;
+  height: 1.2em; /* Force single-line height */
+  overflow-y: hidden; /* No vertical scrollbar */
+  overflow-x: auto; /* Allow horizontal scroll */
+  white-space: pre; /* Keep single-line; works with wrap="off" */
+}
+.edit-summary:focus {
+  outline: none;
+}
+
+/* Inline field popover for character limit */
+.field-popover {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 4px);
+  background: #1b2130;
+  color: #e6e8ef;
+  border: 1px solid #2a3246;
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 12px;
+  white-space: normal;
+  z-index: 20;
+  pointer-events: none;
+}
 
 /* Floating toggles for sidebars */
 .floating-toggle { position: fixed; top: 10px; z-index: 1500; box-shadow: 0 4px 14px rgba(0,0,0,0.4); }

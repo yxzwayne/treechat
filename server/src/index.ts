@@ -425,51 +425,57 @@ Operational Limitations:
   }
 })
 
-// List conversations with a short preview: first user message (30 chars)
+// List conversations with a short preview: use conversations.summary (<=100 chars)
 app.get('/api/conversations', async (_req: Request, res: Response) => {
   try {
     const pool = getPool()
     const r = await pool.query(
-      `with previews as (
-         select c.uuid as id,
-                coalesce(
-                  -- Prefer the first human message
-                  substring((
-                    select m.text from messages m
-                     where m.conversation_id = c.uuid
-                       and (
-                         m.sender = 'human' or lower(coalesce(m.role, '')) = 'user'
-                       )
-                     order by m.created_ts asc, m.created_at asc
-                     limit 1
-                  ) from 1 for 30),
-                  -- Fallback to the first non-system message (e.g., AI) if no human message exists
-                  substring((
-                    select m.text from messages m
-                     where m.conversation_id = c.uuid
-                       and not (
-                         m.sender = 'system' or lower(coalesce(m.role, '')) = 'system'
-                       )
-                     order by m.created_ts asc, m.created_at asc
-                     limit 1
-                  ) from 1 for 30),
-                  -- Last resort: any text at all
-                  substring((
-                    select m.text from messages m
-                     where m.conversation_id = c.uuid
-                     order by m.created_ts asc, m.created_at asc
-                     limit 1
-                  ) from 1 for 30),
-                  ''
-                ) as preview
-           from conversations c
-       )
-       select id, preview
-         from previews
-        order by (select updated_at from conversations where uuid = id) desc, id desc`
+      `select c.uuid as id,
+              case when c.summary is null or btrim(c.summary) = ''
+                   then 'Untitled'
+                   else left(c.summary, 100)
+              end as preview
+         from conversations c
+        order by c.updated_at desc, c.uuid desc`
     )
     const out = r.rows.map(row => ({ id: String(row.id), preview: String(row.preview || '') }))
     res.json(out)
+  } catch (e: any) {
+    res.status(500).json({ error: e?.message || 'db error' })
+  }
+})
+
+// Get conversation summary
+app.get('/api/conversations/:id/summary', async (req: Request, res: Response) => {
+  const convId = String(req.params.id)
+  try {
+    const pool = getPool()
+    const r = await pool.query('select summary from conversations where uuid = $1::uuid', [convId])
+    if (r.rowCount === 0) return res.status(404).json({ error: 'not found' })
+    const summary: string | null = r.rows[0].summary ?? null
+    res.json({ id: convId, summary })
+  } catch (e: any) {
+    res.status(500).json({ error: e?.message || 'db error' })
+  }
+})
+
+// Update conversation summary (up to 100 characters). Does not modify updated_at.
+app.put('/api/conversations/:id/summary', async (req: Request, res: Response) => {
+  const convId = String(req.params.id)
+  const body = req.body as any
+  let summary: any = body?.summary
+  if (typeof summary !== 'string') summary = summary == null ? null : String(summary)
+  if (summary != null) {
+    // Enforce UTF-8 via JS strings and cap length to 100 chars by rejecting longer inputs
+    if ([...summary].length > 100) {
+      return res.status(400).json({ error: 'summary must be <= 100 characters' })
+    }
+  }
+  try {
+    const pool = getPool()
+    const r = await pool.query('update conversations set summary = $1 where uuid = $2::uuid returning summary', [summary, convId])
+    if (r.rowCount === 0) return res.status(404).json({ error: 'not found' })
+    res.json({ id: convId, summary: r.rows[0].summary ?? null })
   } catch (e: any) {
     res.status(500).json({ error: e?.message || 'db error' })
   }

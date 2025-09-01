@@ -93,6 +93,28 @@ export async function listConversations(): Promise<ConversationListItem[]> {
   return res.json()
 }
 
+export async function getConversationSummary(id: string): Promise<{ id: string, summary: string | null }> {
+  const res = await fetch(`/api/conversations/${id}/summary`)
+  if (!res.ok) {
+    const t = await res.text().catch(() => '')
+    throw new Error(`Failed to get summary: ${t}`)
+  }
+  return res.json()
+}
+
+export async function updateConversationSummary(id: string, summary: string | null): Promise<{ id: string, summary: string | null }> {
+  const res = await fetch(`/api/conversations/${id}/summary`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ summary })
+  })
+  if (!res.ok) {
+    const t = await res.text().catch(() => '')
+    throw new Error(`Failed to update summary: ${t}`)
+  }
+  return res.json()
+}
+
 export async function deleteConversation(id: string): Promise<void> {
   const res = await fetch(`/api/conversations/${id}`, { method: 'DELETE' })
   if (!res.ok) {
