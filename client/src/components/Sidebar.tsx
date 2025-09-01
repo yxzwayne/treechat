@@ -56,11 +56,6 @@ export default function Sidebar({ state, onSetSystem, model, onSetModel, onClose
           </div>
         )}
       </div>
-      <div style={{ marginTop: 12 }}>
-        <div style={{ color: '#9aa0ab' }}>TIPS</div>
-          <p>To branch, edit a user message or retry an AI response.</p>
-          <p>You can delete </p>
-      </div>
     </div>
   )
 }

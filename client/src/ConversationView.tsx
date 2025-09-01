@@ -19,7 +19,7 @@ export default function ConversationView() {
   const controllers = useRef<Map<string, AbortController>>(new Map())
   const [toast, setToast] = useState<string | null>(null)
   const [leftOpen, setLeftOpen] = useState(true)
-  const [rightOpen, setRightOpen] = useState(true)
+  const [rightOpen, setRightOpen] = useState(false)
   // One-shot flag to prevent wiping in-memory state right after creating a conversation
   const suppressNextLoad = useRef(false)
 
@@ -227,7 +227,7 @@ export default function ConversationView() {
           {root.children.length === 0 ? (
             <>
               <div className="node-card">
-                {id ? 'This conversation is empty. Start by sending a message.' : 'Start a new conversation by typing a message below.'}
+                {id ? 'This conversation is empty. Start by sending a message. To branch, edit a user message or retry an AI response.' : 'Start a new conversation by typing a message below. To branch, edit a user message or retry an AI response.'}
               </div>
               <div style={{ marginTop: 12 }}>
                 <Composer placeholder={id ? 'SEND A MESSAGE' : 'START A NEW CONVERSATION'} onSend={(t) => sendFrom(root.id, t)} />
@@ -237,8 +237,22 @@ export default function ConversationView() {
             <div className="children-row" style={{ marginLeft: 0 }}>
               {root.children.map(cid => {
                 const child = state.nodes[cid]
+                // compute subtree width in columns for margin reservation
+                const subtreeCols = (id: string | undefined | null): number => {
+                  if (!id) return 1
+                  const n = state.nodes[id]
+                  if (!n || !n.children || n.children.length === 0) return 1
+                  let sum = 0
+                  for (const c of n.children) sum += subtreeCols(c)
+                  return Math.max(1, sum)
+                }
+                const cols = subtreeCols(cid)
+                const extra = Math.max(0, cols - 1)
+                const COL_W = 720
+                const COL_GAP = 12
+                const mr = extra * (COL_W + COL_GAP)
                 return (
-                  <div className="column" key={cid}>
+                  <div className="column" key={cid} style={{ marginRight: mr }}>
                     <MessageNode node={child} state={state} onSelect={(leafId) => dispatch({ type: 'select', id: leafId })} onRetry={retryAtUser} onEditUser={editUser} onSendFrom={sendFrom} onDelete={handleDelete} />
                   </div>
                 )

@@ -13,6 +13,26 @@ type Props = {
 }
 
 export default function MessageNode({ node, state, onSelect, onRetry, onEditUser, onSendFrom, onDelete }: Props) {
+  // Layout constants: keep in sync with CSS variables
+  const COL_W = 720
+  const COL_GAP = 12
+
+  const subtreeCols = useMemo(() => {
+    const memo = new Map<string, number>()
+    const fn = (id: string | undefined | null): number => {
+      if (!id) return 1
+      if (memo.has(id)) return memo.get(id) as number
+      const n = state.nodes[id]
+      if (!n) { memo.set(id, 1); return 1 }
+      if (!n.children || n.children.length === 0) { memo.set(id, 1); return 1 }
+      let sum = 0
+      for (const cid of n.children) sum += fn(cid)
+      const res = Math.max(1, sum)
+      memo.set(id, res)
+      return res
+    }
+    return fn
+  }, [state.nodes])
   const children = useMemo(() => node.children.map(id => state.nodes[id]), [node, state.nodes])
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(node.content)
@@ -24,6 +44,17 @@ export default function MessageNode({ node, state, onSelect, onRetry, onEditUser
   return (
     <div>
       <div className={`node-card ${roleClass} ${isActive ? 'active' : ''}`} onClick={() => onSelect(node.id)}>
+        {editing ? (
+          <div>
+            <textarea className="text-input" rows={4} value={draft} onChange={e => setDraft(e.target.value)} />
+            <div style={{ marginTop: 6, display: 'flex', gap: 8 }}>
+              <button className="button" onClick={() => { setEditing(false) }}>CANCEL</button>
+              <button className="button accent" onClick={() => { setEditing(false); onEditUser(node.id, draft) }}>SAVE TO NEW BRANCH</button>
+            </div>
+          </div>
+        ) : (
+          <div className="node-content">{node.content || <span style={{ color: '#666' }}>GENERATING...</span>}</div>
+        )}
         <div className="node-header">
           <span className="mono">{node.role.toUpperCase()}</span>
           <div className="controls" onClick={e => e.stopPropagation()}>
@@ -60,17 +91,6 @@ export default function MessageNode({ node, state, onSelect, onRetry, onEditUser
             )}
           </div>
         </div>
-        {editing ? (
-          <div>
-            <textarea className="text-input" rows={4} value={draft} onChange={e => setDraft(e.target.value)} />
-            <div style={{ marginTop: 6, display: 'flex', gap: 8 }}>
-              <button className="button" onClick={() => { setEditing(false) }}>CANCEL</button>
-              <button className="button accent" onClick={() => { setEditing(false); onEditUser(node.id, draft) }}>SAVE TO NEW BRANCH</button>
-            </div>
-          </div>
-        ) : (
-          <div className="node-content">{node.content || <span style={{ color: '#666' }}>GENERATING...</span>}</div>
-        )}
       </div>
 
       {node.role === 'assistant' && (
@@ -79,11 +99,16 @@ export default function MessageNode({ node, state, onSelect, onRetry, onEditUser
 
       {children.length > 0 && (
         <div className="children-row">
-          {children.map(child => (
-            <div className="column" key={child.id}>
-              <MessageNode node={child} state={state} onSelect={onSelect} onRetry={onRetry} onEditUser={onEditUser} onSendFrom={onSendFrom} onDelete={onDelete} />
-            </div>
-          ))}
+          {children.map(child => {
+            const cols = subtreeCols(child.id)
+            const extra = Math.max(0, cols - 1)
+            const mr = extra * (COL_W + COL_GAP)
+            return (
+              <div className="column" key={child.id} style={{ marginRight: mr }}>
+                <MessageNode node={child} state={state} onSelect={onSelect} onRetry={onRetry} onEditUser={onEditUser} onSendFrom={onSendFrom} onDelete={onDelete} />
+              </div>
+            )
+          })}
         </div>
       )}
 
