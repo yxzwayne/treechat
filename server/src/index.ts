@@ -425,18 +425,43 @@ Operational Limitations:
   }
 })
 
-// List conversations with a short preview (first 30 chars of concatenated text)
+// List conversations with a short preview: first user message (30 chars)
 app.get('/api/conversations', async (_req: Request, res: Response) => {
   try {
     const pool = getPool()
     const r = await pool.query(
       `with previews as (
          select c.uuid as id,
-                coalesce(substring((
-                  select string_agg(coalesce(m.text, ''), ' ' order by m.created_ts asc, m.created_at asc)
-                  from messages m
-                  where m.conversation_id = c.uuid
-                ) from 1 for 30), '') as preview
+                coalesce(
+                  -- Prefer the first human message
+                  substring((
+                    select m.text from messages m
+                     where m.conversation_id = c.uuid
+                       and (
+                         m.sender = 'human' or lower(coalesce(m.role, '')) = 'user'
+                       )
+                     order by m.created_ts asc, m.created_at asc
+                     limit 1
+                  ) from 1 for 30),
+                  -- Fallback to the first non-system message (e.g., AI) if no human message exists
+                  substring((
+                    select m.text from messages m
+                     where m.conversation_id = c.uuid
+                       and not (
+                         m.sender = 'system' or lower(coalesce(m.role, '')) = 'system'
+                       )
+                     order by m.created_ts asc, m.created_at asc
+                     limit 1
+                  ) from 1 for 30),
+                  -- Last resort: any text at all
+                  substring((
+                    select m.text from messages m
+                     where m.conversation_id = c.uuid
+                     order by m.created_ts asc, m.created_at asc
+                     limit 1
+                  ) from 1 for 30),
+                  ''
+                ) as preview
            from conversations c
        )
        select id, preview

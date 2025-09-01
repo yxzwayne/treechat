@@ -33,6 +33,13 @@
   font-style: normal;
   font-display: swap;
 }
+@font-face {
+  font-family: "Eurostile";
+  src: url("../assets/fonts/Eurostile/Eurostile.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
 
 :root {
   --bg: #0b0c0f;
@@ -52,7 +59,7 @@ body { margin: 0; background: var(--bg); color: var(--text); font-family: "Berke
 
 .app-shell { display: grid; grid-template-rows: 1fr; height: 100%; }
 /* header removed */
-.title { font-weight: 600; font-style: italic; font-size: 1.4rem; margin-bottom: 0.5rem;}
+.title { font-family: "Eurostile", monospace; font-size: 1.4rem; letter-spacing: 2px; margin-bottom: 0.5rem;}
 .container { display: block; height: 100%; }
 .left-pane { position: fixed; top: 0; bottom: 0; left: 0; width: var(--sidebar-w); border-right: 1px solid var(--border); background: var(--panel); padding: 12px; overflow: auto; }
 .tree-pane { height: 100%; overflow: auto; padding: 12px; margin-left: var(--sidebar-w); margin-right: var(--sidebar-w); }

@@ -32,3 +32,8 @@ Notes
 
 - Model is set to gpt-5-mini by default. Change via SERVER env MODEL or client UI as needed.
 - If you can’t install dependencies now, you can still read the code. It’s kept minimal and self-explanatory.
+
+# TODO
+
+- Centralize default system prompt: Move the default prompt to the server as a single source of truth. Options: (a) env var `DEFAULT_SYSTEM_PROMPT` read by the server; or (b) a small `GET /api/defaults` returning `{ systemPrompt }`. The client fetches it on app boot and seeds the root system node; the server uses the same value when synthesizing a missing root on load. Keep the current client-side prompt as a fallback if the fetch/env is absent.
+- Image/file support: Allow uploading and rendering images/files in messages, and forwarding them to the model when supported. Include persistence in Postgres (blob storage path or presigned URL), display thumbnails, and drag-and-drop paste handling on the Composer.
