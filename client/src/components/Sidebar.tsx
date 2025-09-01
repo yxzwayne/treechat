@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { ConversationState } from '../types'
 
-export default function Sidebar({ state, onSetSystem, model, onSetModel, onClose }: { state: ConversationState, onSetSystem: (c: string) => void, model: string, onSetModel: (m: string) => void, onClose: () => void }) {
+export default function Sidebar({ state, onSetSystem, model, onSetModel, onClose, columnWidth, onSetColumnWidth }: { state: ConversationState, onSetSystem: (c: string) => void, model: string, onSetModel: (m: string) => void, onClose: () => void, columnWidth: number, onSetColumnWidth: (n: number) => void }) {
   const count = Object.keys(state.nodes).length - 1
   const sys = state.nodes[state.rootId]
   const [editing, setEditing] = useState(false)
@@ -20,6 +20,21 @@ export default function Sidebar({ state, onSetSystem, model, onSetModel, onClose
         <div style={{ color: '#9aa0ab' }}>MODEL</div>
         <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
           <input className="text-input" style={{ fontFamily: "Berkeley Mono, monospace",  width: "100%" }} value={model} onChange={e => onSetModel(e.target.value)} />
+        </div>
+      </div>
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ color: '#9aa0ab' }}>COLUMN WIDTH</div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 6 }}>
+          <input
+            type="range"
+            min={520}
+            max={1440}
+            step={10}
+            value={columnWidth}
+            onChange={e => onSetColumnWidth(Number(e.target.value))}
+            style={{ flex: 1 }}
+          />
+          <div className="mono" style={{ width: 72, textAlign: 'right', color: '#9aa0ab' }}>{columnWidth}px</div>
         </div>
       </div>
       {null}

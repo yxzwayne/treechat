@@ -14,18 +14,59 @@ export default function ConversationView() {
   const navigate = useNavigate()
   const { state, dispatch } = useConversation()
   const [model, setModel] = useState('gpt-5-mini')
+  const [columnWidth, setColumnWidth] = useState<number>(() => {
+    try {
+      const raw = localStorage.getItem('treechat-col-w')
+      if (!raw) return 720
+      const n = Number(raw)
+      if (!Number.isFinite(n)) return 720
+      return Math.min(1440, Math.max(520, Math.floor(n)))
+    } catch {
+      return 720
+    }
+  })
+
+  useEffect(() => {
+    try {
+      const n = Math.min(1440, Math.max(520, Math.floor(columnWidth)))
+      localStorage.setItem('treechat-col-w', String(n))
+    } catch {}
+  }, [columnWidth])
   const root = useMemo(() => state.nodes[state.rootId], [state])
   const [conversationId, setConversationId] = useState<string | null>(() => (id ? String(id) : null))
   const controllers = useRef<Map<string, AbortController>>(new Map())
   const [toast, setToast] = useState<string | null>(null)
-  const [leftOpen, setLeftOpen] = useState(true)
-  const [rightOpen, setRightOpen] = useState(false)
+  const [leftOpen, setLeftOpen] = useState<boolean>(() => {
+    try {
+      const v = localStorage.getItem('treechat-left-open')
+      if (v == null) return true
+      return v === '1' || v === 'true'
+    } catch {
+      return true
+    }
+  })
+  const [rightOpen, setRightOpen] = useState<boolean>(() => {
+    try {
+      const v = localStorage.getItem('treechat-right-open')
+      if (v == null) return false
+      return v === '1' || v === 'true'
+    } catch {
+      return false
+    }
+  })
   // One-shot flag to prevent wiping in-memory state right after creating a conversation
   const suppressNextLoad = useRef(false)
 
   useEffect(() => {
     startAutoFlush()
   }, [])
+
+  useEffect(() => {
+    try { localStorage.setItem('treechat-left-open', leftOpen ? '1' : '0') } catch {}
+  }, [leftOpen])
+  useEffect(() => {
+    try { localStorage.setItem('treechat-right-open', rightOpen ? '1' : '0') } catch {}
+  }, [rightOpen])
 
   // When the route param changes, either load that conversation or reset to a fresh state
   useEffect(() => {
@@ -204,7 +245,7 @@ export default function ConversationView() {
 
   return (
     <div className="app-shell">
-      <div className="container">
+      <div className="container" style={{ ['--col-w' as any]: `${columnWidth}px` }}>
         {leftOpen && (
           <div className="left-pane">
             <LeftSidebar onClose={() => setLeftOpen(false)} />
@@ -248,7 +289,7 @@ export default function ConversationView() {
                 }
                 const cols = subtreeCols(cid)
                 const extra = Math.max(0, cols - 1)
-                const COL_W = 720
+                const COL_W = columnWidth
                 const COL_GAP = 12
                 const mr = extra * (COL_W + COL_GAP)
                 return (
@@ -282,6 +323,8 @@ export default function ConversationView() {
             }}
             model={model}
             onSetModel={setModel}
+            columnWidth={columnWidth}
+            onSetColumnWidth={setColumnWidth}
             onClose={() => setRightOpen(false)}
           />
           </div>
