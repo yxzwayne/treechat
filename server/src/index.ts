@@ -14,9 +14,16 @@ const USE_MOCK = process.env.USE_MOCK === '1'
 
 let openai: OpenAI | null = null
 if (!USE_MOCK) {
-  const key = process.env.OPENAI_API_KEY
-  if (!key) console.warn('OPENAI_API_KEY not set. Set USE_MOCK=1 to run without network.')
-  openai = new OpenAI({ apiKey: key })
+  const key = process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY
+  if (!key) console.warn('OPENROUTER_API_KEY not set. Set USE_MOCK=1 to run without network.')
+  openai = new OpenAI({
+    apiKey: key,
+    baseURL: process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1',
+    defaultHeaders: {
+      'HTTP-Referer': process.env.OPENROUTER_SITE_URL || 'http://localhost:5173',
+      'X-Title': process.env.OPENROUTER_APP_NAME || 'TreeChat CC',
+    },
+  })
 }
 
 app.get('/health', async (_req, res) => {
@@ -35,7 +42,7 @@ app.post('/api/chat', async (req: Request, res: Response) => {
 
   try {
     const { model, messages, conversationId, assistantExternalId } = req.body as { model?: string, messages: { role: 'system' | 'user' | 'assistant', content: string }[], conversationId?: string, assistantExternalId?: string }
-    const useModel = model || process.env.MODEL || 'gpt-5-mini'
+    const useModel = model || process.env.MODEL || 'openai/gpt-5-mini'
     const startedAt = Date.now()
     let fullResponse = ''
 
@@ -83,7 +90,7 @@ app.post('/api/chat', async (req: Request, res: Response) => {
     console.error(err)
     try {
       const body = (req as any).body || {}
-      await logChat({ model: body?.model || process.env.MODEL || 'gpt-5-mini', messages: body?.messages || [], response: '', startedAt: Date.now(), error: err?.message || String(err) })
+      await logChat({ model: body?.model || process.env.MODEL || 'openai/gpt-5-mini', messages: body?.messages || [], response: '', startedAt: Date.now(), error: err?.message || String(err) })
     } catch {}
     res.status(500).end('Server error')
   }
