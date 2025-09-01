@@ -49,6 +49,7 @@
   --muted: #9aa0ab;
   --accent: #1ca7ea;
   --border: #242938;
+  --topbar-h: 44px;
   --col-w: 720px;
   --sidebar-w: 300px;
   --col-gap: 12px;
@@ -59,11 +60,13 @@ body { margin: 0; background: var(--bg); color: var(--text); font-family: "Berke
 
 .app-shell { display: grid; grid-template-rows: 1fr; height: 100%; }
 /* header removed */
-.title { font-family: "Eurostile", monospace; font-size: 1.4rem; letter-spacing: 2px; margin-bottom: 0.5rem;}
+.title { font-family: "Eurostile", monospace; font-size: 1.4rem; font-weight: bold; letter-spacing: 2px; margin-bottom: 0.5rem;}
 .container { display: block; height: 100%; }
 .left-pane { position: fixed; top: 0; bottom: 0; left: 0; width: var(--sidebar-w); border-right: 1px solid var(--border); background: var(--panel); padding: 12px; overflow: auto; }
 .tree-pane { height: 100%; overflow: auto; padding: 12px; margin-left: var(--sidebar-w); margin-right: var(--sidebar-w); }
 .side-pane { position: fixed; top: 0; bottom: 0; right: 0; width: var(--sidebar-w); border-left: 1px solid var(--border); background: var(--panel); padding: 12px; overflow: auto; }
+/* Place side panels above the top bar */
+.left-pane, .side-pane { z-index: 1100; }
 
 .node-card { background: var(--card); border: 1px solid var(--border); border-radius: 0px; padding: 10px; width: 100%;}
 .node-user { border-left: 4px solid #0042ff; }
@@ -95,6 +98,22 @@ body { margin: 0; background: var(--bg); color: var(--text); font-family: "Berke
 .button.danger:hover { background: #b71c1c; }
 .icon-button { background: transparent; border: none; padding: 4px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
 .icon-button:hover svg path { stroke: #c1c7d0; }
+
+/* Unified sidebar open/close buttons */
+.sidepanel-toggle-btn {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  width: 32px;
+  height: 32px;
+  border-radius: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+.sidepanel-toggle-btn:hover svg path { stroke: #c1c7d0; }
 
 .text-input, .composer .ta { width: 100%; padding: 10px; border: 1px solid var(--border); background: #0f1117; color: var(--text); }
 .text-input { flex: 1; max-width: 100%; border-radius: 8px; display: block; box-sizing: border-box; }
@@ -170,3 +189,25 @@ body { margin: 0; background: var(--bg); color: var(--text); font-family: "Berke
 .floating-toggle { position: fixed; top: 10px; z-index: 1500; box-shadow: 0 4px 14px rgba(0,0,0,0.4); }
 .floating-toggle.left { left: 10px; }
 .floating-toggle.right { right: 10px; }
+
+/* Transparent top header bar */
+.top-bar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: var(--topbar-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  background: transparent;
+  border-bottom: 1px solid var(--border);
+  z-index: 1000;
+  /* Let clicks pass through except on explicit controls */
+  pointer-events: none;
+}
+
+/* Re-enable interaction for the toggle buttons inside the top bar */
+.top-bar .sidepanel-toggle-btn { pointer-events: auto; }
+
+/* Ensure content isn't obscured by the fixed top bar */
+.tree-pane { padding-top: calc(12px + var(--topbar-h)); }
