@@ -75,5 +75,6 @@ Notes
 
 # TODO
 
-- Centralize default system prompt: Move the default prompt to the server as a single source of truth. Options: (a) env var `DEFAULT_SYSTEM_PROMPT` read by the server; or (b) a small `GET /api/defaults` returning `{ systemPrompt }`. The client fetches it on app boot and seeds the root system node; the server uses the same value when synthesizing a missing root on load. Keep the current client-side prompt as a fallback if the fetch/env is absent.
 - Image/file support: Allow uploading and rendering images/files in messages, and forwarding them to the model when supported. Include persistence in Postgres (blob storage path or presigned URL), display thumbnails, and drag-and-drop paste handling on the Composer.
+- ⚠️ when user edits a message, provide the option to "override current branch" and clearly notify them that this is a "delete plus create" operation
+- **New workflow, automatic conversation summary from the first user message**: this should be a separate workflow that runs like lambda on hardware with access to client, server and database. this workflow is triggered by a user sending the first message in a new conversation. This workflow has a system prompt instructing the model to summarize the following content and appends the user's first prompt. ask the summary to be under 10 words or characters if it's not a Latin language.
