@@ -4,6 +4,7 @@ import cors from 'cors'
 import type { Request, Response } from 'express'
 import OpenAI from 'openai'
 import { ensureSchema, getPool } from './pg'
+import { allowedModels, defaultModel, modelLabels } from './models'
 
 const app = express()
 app.use(cors())
@@ -36,13 +37,18 @@ app.get('/health', async (_req, res) => {
   }
 })
 
+app.get('/api/models', async (_req: Request, res: Response) => {
+  res.json({ models: allowedModels, default: defaultModel, labels: modelLabels })
+})
+
 app.post('/api/chat', async (req: Request, res: Response) => {
   res.setHeader('Content-Type', 'text/plain; charset=utf-8')
   res.setHeader('Transfer-Encoding', 'chunked')
 
   try {
     const { model, messages, conversationId, assistantExternalId } = req.body as { model?: string, messages: { role: 'system' | 'user' | 'assistant', content: string }[], conversationId?: string, assistantExternalId?: string }
-    const useModel = model || process.env.MODEL || 'openai/gpt-5-mini'
+    const requested = (model || process.env.MODEL || defaultModel) as string
+    const useModel = allowedModels.includes(requested as any) ? (requested as any) : defaultModel
     const startedAt = Date.now()
     let fullResponse = ''
 
@@ -90,7 +96,9 @@ app.post('/api/chat', async (req: Request, res: Response) => {
     console.error(err)
     try {
       const body = (req as any).body || {}
-      await logChat({ model: body?.model || process.env.MODEL || 'openai/gpt-5-mini', messages: body?.messages || [], response: '', startedAt: Date.now(), error: err?.message || String(err) })
+      const requested = (body?.model || process.env.MODEL || defaultModel) as string
+      const useModel = allowedModels.includes(requested as any) ? (requested as any) : defaultModel
+      await logChat({ model: useModel, messages: body?.messages || [], response: '', startedAt: Date.now(), error: err?.message || String(err) })
     } catch {}
     res.status(500).end('Server error')
   }

@@ -6,6 +6,7 @@ import MessageNode from './components/MessageNode'
 import Sidebar from './components/Sidebar'
 import LeftSidebar from './components/LeftSidebar'
 import { streamChat, createConversation, saveSnapshot, loadConversation, upsertMessage, deleteMessage } from './lib/api'
+import { fetchAllowedModels, ModelsResponse } from './lib/models'
 import { startAutoFlush } from './lib/sync'
 import Composer from './components/Composer'
 
@@ -13,7 +14,11 @@ export default function ConversationView() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { state, dispatch } = useConversation()
-  const [model, setModel] = useState('gpt-5-mini')
+  const [models, setModels] = useState<string[]>([])
+  const [defaultModel, setDefaultModel] = useState<string>('openai/gpt-5-mini')
+  const [lastModel, setLastModel] = useState<string>('openai/gpt-5-mini')
+  const [labels, setLabels] = useState<Record<string, string>>({})
+  const lastKey = (cid: string | null) => `treechat-last-model:${cid ?? 'global'}`
   const [columnWidth, setColumnWidth] = useState<number>(() => {
     try {
       const raw = localStorage.getItem('treechat-col-w')
@@ -62,6 +67,23 @@ export default function ConversationView() {
   }, [])
 
   useEffect(() => {
+    (async () => {
+      const r: ModelsResponse = await fetchAllowedModels()
+      setModels(r.models)
+      setDefaultModel(r.default)
+      setLabels(r.labels || {})
+      try {
+        const stored = localStorage.getItem(lastKey(conversationId))
+        const initial = stored && r.models.includes(stored) ? stored : r.default
+        setLastModel(initial)
+      } catch {
+        setLastModel(r.default)
+      }
+    })()
+    // also update when conversation changes
+  }, [conversationId])
+
+  useEffect(() => {
     try { localStorage.setItem('treechat-left-open', leftOpen ? '1' : '0') } catch {}
   }, [leftOpen])
   useEffect(() => {
@@ -97,7 +119,7 @@ export default function ConversationView() {
     })()
   }, [id, dispatch])
 
-  async function sendFrom(parentAssistantId: string, content: string) {
+  async function sendFrom(parentAssistantId: string, content: string, model: string) {
     const t = content.trim()
     if (!t) return
     // Ensure a conversation exists on first send and seed initial snapshot (system prompt only)
@@ -145,7 +167,8 @@ export default function ConversationView() {
     }
   }
 
-  async function retryAtUser(userNodeId: string) {
+  async function retryAtUser(userNodeId: string, modelOverride?: string) {
+    const model = modelOverride || lastModel || defaultModel
     const assistantId = crypto.randomUUID()
     dispatch({ type: 'start_assistant', parentId: userNodeId, id: assistantId, model })
     if (conversationId) {
@@ -171,7 +194,7 @@ export default function ConversationView() {
     }
   }
 
-  async function editUser(nodeId: string, newContent: string) {
+  async function editUser(nodeId: string, newContent: string, model: string) {
     const newUserId = crypto.randomUUID()
     dispatch({ type: 'edit_user', nodeId, newContent, newId: newUserId })
     if (conversationId) {
@@ -315,7 +338,14 @@ export default function ConversationView() {
                 {id ? 'This conversation is empty. Start by sending a message. To branch, edit a user message or retry an AI response.' : 'Start a new conversation by typing a message below. To branch, edit a user message or retry an AI response.'}
               </div>
               <div style={{ marginTop: 12 }}>
-                <Composer placeholder={id ? 'SEND A MESSAGE' : 'START A NEW CONVERSATION'} onSend={(t) => sendFrom(root.id, t)} />
+                <Composer
+                  placeholder={id ? 'SEND A MESSAGE' : 'START A NEW CONVERSATION'}
+                  models={models}
+                  defaultModel={defaultModel}
+                  initialModel={lastModel}
+                  labels={labels}
+                  onSend={(t, m) => { setLastModel(m); try { localStorage.setItem(lastKey(conversationId), m) } catch {}; sendFrom(root.id, t, m) }}
+                />
               </div>
             </>
           ) : (
@@ -338,7 +368,19 @@ export default function ConversationView() {
                 const mr = extra * (COL_W + COL_GAP)
                 return (
                   <div className="column" key={cid} style={{ marginRight: mr }}>
-                    <MessageNode node={child} state={state} onSelect={(leafId) => dispatch({ type: 'select', id: leafId })} onRetry={retryAtUser} onEditUser={editUser} onSendFrom={sendFrom} onDelete={handleDelete} />
+                    <MessageNode
+                      node={child}
+                      state={state}
+                      onSelect={(leafId) => dispatch({ type: 'select', id: leafId })}
+                      onRetry={(userId, m) => { if (m) { setLastModel(m); try { localStorage.setItem(lastKey(conversationId), m) } catch {} } retryAtUser(userId, m) }}
+                      onEditUser={(nodeId, text, m) => { setLastModel(m); try { localStorage.setItem(lastKey(conversationId), m) } catch {}; editUser(nodeId, text, m) }}
+                      onSendFrom={(parentId, text, m) => { setLastModel(m); try { localStorage.setItem(lastKey(conversationId), m) } catch {}; sendFrom(parentId, text, m) }}
+                      onDelete={handleDelete}
+                      models={models}
+                      defaultModel={defaultModel}
+                      lastModel={lastModel}
+                      labels={labels}
+                    />
                   </div>
                 )
               })}
@@ -365,8 +407,6 @@ export default function ConversationView() {
                 } catch {}
               }
             }}
-            model={model}
-            onSetModel={setModel}
             columnWidth={columnWidth}
             onSetColumnWidth={setColumnWidth}
             onClose={() => setRightOpen(false)}

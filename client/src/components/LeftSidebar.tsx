@@ -135,7 +135,7 @@ export default function LeftSidebar({ onClose }: { onClose: () => void }) {
                     placeholder="Untitled"
                   />
                   {limitNotice && (
-                    <div className="field-popover" role="status">limit to chat summary is 100 characters.</div>
+                    <div className="field-popover" role="status">Limit to chat summary is 100 characters.</div>
                   )}
                   <button
                     className="icon-button chat-save"

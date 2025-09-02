@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { ConversationState } from '../types'
 
-export default function Sidebar({ state, onSetSystem, model, onSetModel, onClose, columnWidth, onSetColumnWidth }: { state: ConversationState, onSetSystem: (c: string) => void, model: string, onSetModel: (m: string) => void, onClose: () => void, columnWidth: number, onSetColumnWidth: (n: number) => void }) {
+export default function Sidebar({ state, onSetSystem, onClose, columnWidth, onSetColumnWidth }: { state: ConversationState, onSetSystem: (c: string) => void, onClose: () => void, columnWidth: number, onSetColumnWidth: (n: number) => void }) {
   const count = Object.keys(state.nodes).length - 1
   const sys = state.nodes[state.rootId]
   const [editing, setEditing] = useState(false)
@@ -27,13 +27,7 @@ export default function Sidebar({ state, onSetSystem, model, onSetModel, onClose
         </button>
         <div style={{ color: "#ddd", fontWeight: "600" }}>SETTINGS</div>
       </div>
-      <div style={{ marginBottom: 12 }}>
-        <div style={{ color: '#9aa0ab' }}>MODEL</div>
-        <p style={{ fontSize: "14px"}}>NEW MESSAGES USES THIS MODEL BY DEFAULT IF NOT SPECIFIED.</p>
-        <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
-          <input className="text-input" style={{ fontFamily: "Berkeley Mono, monospace",  width: "100%" }} value={model} onChange={e => onSetModel(e.target.value)} />
-        </div>
-      </div>
+      {null}
       <div style={{ marginBottom: 12 }}>
         <div style={{ color: '#9aa0ab' }}>COLUMN WIDTH</div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 6 }}>

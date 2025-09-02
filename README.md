@@ -1,4 +1,4 @@
-# TreeChat CC — Branching Chat UI with OpenAI
+# TreeChat CC — Branching Chat UI
 
 ## Overview
 
