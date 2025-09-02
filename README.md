@@ -2,11 +2,11 @@
 
 ## Overview
 
-This is a minimal React + TypeScript app that renders full branching conversation trees: user edits and assistant retries create sibling branches that are preserved and displayed side-by-side. A tiny Node/Express proxy streams responses from OpenAI so the API key is never exposed to the browser.
+This is a minimal React + TypeScript app that renders full branching conversation trees: user edits and assistant retries create sibling branches that are preserved and displayed side-by-side. This supports retries, user edits, selecting any leaf to continue the branch, and multi-model chats.
 
 ## What’s inside
 
-- client: Vite + React + TypeScript UI that renders a conversation tree, supports retries, user edits, and selecting any leaf to continue the branch.
+- client: Vite + React + TypeScript UI that renders a conversation tree.
 - server: Express + OpenAI SDK proxy endpoint streaming assistant deltas.
 
 ## Quick start

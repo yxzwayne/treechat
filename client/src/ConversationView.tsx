@@ -38,6 +38,25 @@ export default function ConversationView() {
     } catch {}
   }, [columnWidth])
   const root = useMemo(() => state.nodes[state.rootId], [state])
+
+  // Compute subtree column spans once per state change
+  const subtreeColsMap = useMemo(() => {
+    const memo = new Map<string, number>()
+    const fn = (id: string | undefined | null): number => {
+      if (!id) return 1
+      if (memo.has(id)) return memo.get(id) as number
+      const n = state.nodes[id]
+      if (!n || !n.children || n.children.length === 0) { memo.set(id, 1); return 1 }
+      let sum = 0
+      for (const c of n.children) sum += fn(c)
+      const res = Math.max(1, sum)
+      memo.set(id, res)
+      return res
+    }
+    // Ensure we populate the map for all reachable nodes
+    Object.keys(state.nodes).forEach(k => fn(k))
+    return memo
+  }, [state.nodes])
   const [conversationId, setConversationId] = useState<string | null>(() => (id ? String(id) : null))
   const controllers = useRef<Map<string, AbortController>>(new Map())
   const [toast, setToast] = useState<string | null>(null)
@@ -352,22 +371,10 @@ export default function ConversationView() {
             <div className="children-row" style={{ marginLeft: 0 }}>
               {root.children.map(cid => {
                 const child = state.nodes[cid]
-                // compute subtree width in columns for margin reservation
-                const subtreeCols = (id: string | undefined | null): number => {
-                  if (!id) return 1
-                  const n = state.nodes[id]
-                  if (!n || !n.children || n.children.length === 0) return 1
-                  let sum = 0
-                  for (const c of n.children) sum += subtreeCols(c)
-                  return Math.max(1, sum)
-                }
-                const cols = subtreeCols(cid)
+                const cols = subtreeColsMap.get(cid) ?? 1
                 const extra = Math.max(0, cols - 1)
-                const COL_W = columnWidth
-                const COL_GAP = 12
-                const mr = extra * (COL_W + COL_GAP)
                 return (
-                  <div className="column" key={cid} style={{ marginRight: mr }}>
+                  <div className="column" key={cid} style={{ ['--extra-cols' as any]: extra }}>
                     <MessageNode
                       node={child}
                       state={state}
@@ -380,6 +387,7 @@ export default function ConversationView() {
                       defaultModel={defaultModel}
                       lastModel={lastModel}
                       labels={labels}
+                      subtreeColsMap={subtreeColsMap}
                     />
                   </div>
                 )
