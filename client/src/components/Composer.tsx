@@ -1,9 +1,22 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { Send } from 'lucide-react'
 
-export default function Composer({ placeholder, models, defaultModel, initialModel, labels, onSend }: { placeholder?: string, models: string[], defaultModel: string, initialModel?: string, labels?: Record<string, string>, onSend: (text: string, model: string) => void }) {
+import { Button } from './ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
+import { Textarea } from './ui/textarea'
+
+type Props = {
+  placeholder?: string
+  models: string[]
+  defaultModel: string
+  initialModel?: string
+  labels?: Record<string, string>
+  onSend: (text: string, model: string) => void
+}
+
+export default function Composer({ placeholder, models, defaultModel, initialModel, labels, onSend }: Props) {
   const [text, setText] = useState('')
   const [model, setModel] = useState<string>(initialModel || defaultModel)
-  const [open, setOpen] = useState(false)
   const taRef = useRef<HTMLTextAreaElement | null>(null)
 
   useEffect(() => {
@@ -14,7 +27,7 @@ export default function Composer({ placeholder, models, defaultModel, initialMod
     const ta = taRef.current
     if (!ta) return
     ta.style.height = '0px'
-    ta.style.height = Math.min(280, Math.max(80, ta.scrollHeight)) + 'px'
+    ta.style.height = Math.min(320, Math.max(96, ta.scrollHeight)) + 'px'
   }
 
   function handleSend() {
@@ -25,46 +38,35 @@ export default function Composer({ placeholder, models, defaultModel, initialMod
   }
 
   return (
-    <div className="composer">
-      <textarea
+    <div className="space-y-3">
+      <Textarea
         ref={taRef}
-        className="ta"
-        rows={3}
+        rows={4}
         placeholder={placeholder || 'Reply...'}
         value={text}
         onChange={e => setText(e.target.value)}
         onKeyDown={e => {
           if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }
         }}
+        className="min-h-[120px] resize-none bg-secondary/50 text-base"
       />
-      <div className="row" style={{ alignItems: 'center' }}>
-        <div style={{ position: 'relative' }}>
-          <button
-            className="button pale"
-            onClick={() => setOpen(o => !o)}
-            aria-label="Select model"
-            title="Select model"
-          >
-            {labels?.[model] || model}
-          </button>
-          {open && (
-            <div className="modal" style={{ position: 'absolute', left: 0, bottom: 'calc(100% + 6px)', width: 320 }} onMouseLeave={() => setOpen(false)}>
-              <div className="modal-body" style={{ padding: 0 }}>
-                {models.map(m => (
-                  <div
-                    key={m}
-                    onClick={() => { setModel(m); setOpen(false) }}
-                    className="mono"
-                    style={{ padding: '8px 10px', cursor: 'pointer', borderBottom: '1px solid var(--border)', background: m === model ? '#182036' : 'transparent' }}
-                  >
-                    {labels?.[m] || m}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-        <button className="button accent" onClick={handleSend}>SEND</button>
+      <div className="flex flex-wrap items-center gap-3 justify-between">
+        <Select value={model} onValueChange={setModel}>
+          <SelectTrigger className="w-64 bg-secondary/60">
+            <SelectValue placeholder="Select model" />
+          </SelectTrigger>
+          <SelectContent className="w-72">
+            {models.map(m => (
+              <SelectItem key={m} value={m}>
+                {labels?.[m] || m}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button onClick={handleSend} className="gap-2">
+          <Send className="h-4 w-4" />
+          Send
+        </Button>
       </div>
     </div>
   )

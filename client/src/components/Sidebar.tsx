@@ -1,82 +1,88 @@
 import React, { useMemo, useState } from 'react'
+import { PanelRightClose, SlidersHorizontal } from 'lucide-react'
+
 import { ConversationState } from '../types'
+import { Button } from './ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
+import { Slider } from './ui/slider'
+import { Textarea } from './ui/textarea'
 
 export default function Sidebar({ state, onSetSystem, onClose, columnWidth, onSetColumnWidth }: { state: ConversationState, onSetSystem: (c: string) => void, onClose: () => void, columnWidth: number, onSetColumnWidth: (n: number) => void }) {
   const count = Object.keys(state.nodes).length - 1
   const sys = state.nodes[state.rootId]
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(sys.content)
-  // Collapse long system prompts by default
   const COLLAPSE_THRESHOLD = 200
   const isLong = useMemo(() => (sys.content || '').length > COLLAPSE_THRESHOLD, [sys.content])
   const [collapsed, setCollapsed] = useState(true)
   return (
-    <div>
-      <div style={{ color: '#9aa0ab', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
-        <button
-          className="sidepanel-toggle-btn"
-          onClick={onClose}
-          aria-label="Close right sidebar"
-          title="Close right sidebar"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-panel-right-close-icon lucide-panel-right-close">
-            <rect width="18" height="18" x="3" y="3" rx="2"/>
-            <path d="M15 3v18"/>
-            <path d="m8 9 3 3-3 3"/>
-          </svg>
-        </button>
-        <div style={{ color: "#ddd", fontWeight: "600" }}>SETTINGS</div>
+    <div className="flex h-full flex-col gap-4">
+      <div className="flex items-center justify-between text-muted-foreground">
+        <Button variant="ghost" size="icon" aria-label="Close right sidebar" onClick={onClose}>
+          <PanelRightClose className="h-5 w-5" />
+        </Button>
+        <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          <SlidersHorizontal className="h-4 w-4" />
+          Settings
+        </div>
       </div>
-      {null}
-      <div style={{ marginBottom: 12 }}>
-        <div style={{ color: '#9aa0ab' }}>COLUMN WIDTH</div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 6 }}>
-          <input
-            type="range"
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm font-semibold text-muted-foreground">Column width</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Slider
+            value={[columnWidth]}
             min={520}
             max={1440}
             step={10}
-            value={columnWidth}
-            onChange={e => onSetColumnWidth(Number(e.target.value))}
-            style={{ flex: 1 }}
+            onValueChange={([v]) => onSetColumnWidth(v)}
           />
-          <div className="mono" style={{ width: 72, textAlign: 'right', color: '#9aa0ab' }}>{columnWidth}px</div>
-        </div>
-      </div>
-      {null}
-      <div style={{ marginBottom: 12 }}>
-        <div style={{ color: '#9aa0ab' }}>STATS</div>
-        <div>Total nodes: {count}</div>
-        <div>Selected: {state.selectedLeafId}</div>
-      </div>
-      <div style={{ marginBottom: 12 }}>
-        <div style={{ color: '#9aa0ab', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <div>SYSTEM PROMPT</div>
+          <div className="text-right text-sm text-muted-foreground mono">{columnWidth}px</div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm font-semibold text-muted-foreground">Stats</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-1 text-sm">
+          <div>Total nodes: {count}</div>
+          <div>Selected: {state.selectedLeafId}</div>
+        </CardContent>
+      </Card>
+      <Card className="flex-1">
+        <CardHeader className="flex-row items-center justify-between space-y-0">
+          <CardTitle className="text-sm font-semibold text-muted-foreground">System prompt</CardTitle>
           {!editing && isLong && (
-            <button className="button ghost small" onClick={() => setCollapsed(c => !c)}>{collapsed ? 'SHOW MORE' : 'SHOW LESS'}</button>
+            <Button variant="ghost" size="sm" onClick={() => setCollapsed(c => !c)}>
+              {collapsed ? 'Show more' : 'Show less'}
+            </Button>
           )}
-        </div>
-        <div className="node-card node-system" style={{ marginTop: 6 }}>
+        </CardHeader>
+        <CardContent className="space-y-3">
           {editing ? (
-            <div>
-              <textarea className="text-input" rows={5} value={draft} onChange={e => setDraft(e.target.value)} />
-              <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
-                <button className="button" onClick={() => { setEditing(false); setDraft(sys.content) }}>CANCEL</button>
-                <button className="button accent" onClick={() => { setEditing(false); onSetSystem(draft) }}>SAVE</button>
+            <>
+              <Textarea
+                rows={6}
+                value={draft}
+                onChange={e => setDraft(e.target.value)}
+                className="bg-secondary/50"
+              />
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" onClick={() => { setEditing(false); setDraft(sys.content) }}>Cancel</Button>
+                <Button onClick={() => { setEditing(false); onSetSystem(draft) }}>Save</Button>
               </div>
-            </div>
+            </>
           ) : (
-            <div style={{ whiteSpace: 'pre-wrap', ...(isLong && collapsed ? { maxHeight: 160, overflow: 'hidden' } : {}) }}>
-              {sys.content || <span style={{ color: '#666' }}>(empty)</span>}
+            <div className={isLong && collapsed ? 'max-h-40 overflow-hidden text-sm leading-6 text-foreground/90' : 'text-sm leading-6 text-foreground/90'}>
+              {sys.content || <span className="text-muted-foreground">(empty)</span>}
             </div>
           )}
-        </div>
-        {!editing && (
-          <div style={{ marginTop: 6 }}>
-            <button className="button ghost" onClick={() => { setEditing(true); setDraft(sys.content) }}>EDIT</button>
-          </div>
-        )}
-      </div>
+          {!editing && (
+            <Button variant="secondary" onClick={() => { setEditing(true); setDraft(sys.content) }}>Edit</Button>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

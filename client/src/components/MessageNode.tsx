@@ -1,6 +1,14 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
+import { MessageSquare, Pencil, Redo, Trash2 } from 'lucide-react'
+
 import { ConversationState, MessageNode as TMessageNode } from '../types'
+import { cn } from '../lib/utils'
 import Composer from './Composer'
+import { Button } from './ui/button'
+import { Card } from './ui/card'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
+import { Textarea } from './ui/textarea'
 
 type Props = {
   node: TMessageNode
@@ -17,124 +25,178 @@ type Props = {
   subtreeColsMap: Map<string, number>
 }
 
-export default function MessageNode({ node, state, onSelect, onRetry, onEditUser, onSendFrom, onDelete, models, defaultModel, lastModel, labels, subtreeColsMap }: Props) {
+export default function MessageNode({
+  node,
+  state,
+  onSelect,
+  onRetry,
+  onEditUser,
+  onSendFrom,
+  onDelete,
+  models,
+  defaultModel,
+  lastModel,
+  labels,
+  subtreeColsMap,
+}: Props) {
   const children = useMemo(() => node.children.map(id => state.nodes[id]), [node, state.nodes])
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(node.content)
-  const [confirming, setConfirming] = useState(false)
-  const [retryOpen, setRetryOpen] = useState(false)
-  const menuRef = useRef<HTMLDivElement | null>(null)
-  useEffect(() => {
-    function onDocClick(e: MouseEvent) {
-      if (!retryOpen) return
-      const el = menuRef.current
-      if (!el) { setRetryOpen(false); return }
-      if (!(e.target instanceof Node)) { setRetryOpen(false); return }
-      if (!el.contains(e.target)) setRetryOpen(false)
-    }
-    document.addEventListener('click', onDocClick)
-    return () => { document.removeEventListener('click', onDocClick) }
-  }, [retryOpen])
   const parentAssistantModel = node.parentId ? state.nodes[node.parentId!]?.model : undefined
   const [editModel, setEditModel] = useState<string>(parentAssistantModel || lastModel || defaultModel)
+  const [retryModel, setRetryModel] = useState<string>(node.model || lastModel || defaultModel)
+  const [openConfirm, setOpenConfirm] = useState(false)
 
-  const roleClass = node.role === 'user' ? 'node-user' : node.role === 'assistant' ? 'node-assistant' : 'node-system'
+  useEffect(() => {
+    setEditModel(parentAssistantModel || lastModel || defaultModel)
+  }, [parentAssistantModel, lastModel, defaultModel])
+
+  useEffect(() => {
+    setRetryModel(node.model || lastModel || defaultModel)
+  }, [node.model, lastModel, defaultModel])
+
   const isActive = state.selectedLeafId === node.id
+
+  const roleStyles = {
+    user: 'border-l-4 border-l-blue-500',
+    assistant: 'border-l-4 border-l-cyan-400',
+    system: 'border-l-4 border-l-amber-400',
+  } as const
 
   return (
     <div>
-      <div className={`node-card ${roleClass} ${isActive ? 'active' : ''}`} onClick={() => onSelect(node.id)}>
-        {editing ? (
-          <div>
-            <textarea className="text-input" rows={4} value={draft} onChange={e => setDraft(e.target.value)} />
-            <div style={{ marginTop: 6, display: 'flex', gap: 8, alignItems: 'center' }}>
-              <button className="button" onClick={() => { setEditing(false) }}>CANCEL</button>
-              <button className="button accent" onClick={() => { setEditing(false); onEditUser(node.id, draft, editModel) }}>SAVE TO NEW BRANCH</button>
-              <div style={{ position: 'relative', marginLeft: 'auto' }}>
-                <button className="button pale" onClick={(e) => { e.stopPropagation(); setRetryOpen(o => !o) }}>MODEL: {labels?.[editModel] || editModel}</button>
-                {retryOpen && (
-                  <div ref={menuRef} className="modal" style={{ position: 'absolute', right: 0, bottom: 'calc(100% + 6px)', width: 320 }}>
-                    <div className="modal-body" style={{ padding: 0 }}>
-                      {models.map(m => (
-                        <div key={m} onClick={() => { setEditModel(m); setRetryOpen(false) }} className="mono" style={{ padding: '8px 10px', cursor: 'pointer', borderBottom: '1px solid var(--border)', background: m === editModel ? '#182036' : 'transparent' }}>{labels?.[m] || m}</div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="node-content">{node.content || <span style={{ color: '#666' }}>GENERATING...</span>}</div>
+      <Card
+        className={cn(
+          'cursor-pointer bg-card/80 backdrop-blur p-4 sm:p-5 transition ring-offset-background',
+          roleStyles[node.role],
+          isActive && 'ring-2 ring-primary/60'
         )}
-        <div className="node-header">
-          <span className="mono">{node.role.toUpperCase()}</span>
-          <div className="controls" onClick={e => e.stopPropagation()}>
-            {node.role === 'assistant' && (
-              <>
-                {node.model && (
-                  <span className="mono" style={{ color: '#9aa0ab' }}>{labels?.[node.model] || node.model}</span>
-                )}
-                <button className="icon-button" aria-label="Delete message" title="Delete message" onClick={() => setConfirming(true)}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M3 6h18" stroke="#9aa0ab" strokeWidth="2" strokeLinecap="round"/>
-                    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="#9aa0ab" strokeWidth="2" strokeLinecap="round"/>
-                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" stroke="#9aa0ab" strokeWidth="2" strokeLinecap="round"/>
-                    <path d="M10 11v6M14 11v6" stroke="#9aa0ab" strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
-                </button>
-                <div style={{ position: 'relative' }}>
-                  <button className="button ghost" onClick={() => setRetryOpen(o => !o)}>RETRY WITH</button>
-                  {retryOpen && (
-                    <div ref={menuRef} className="modal" style={{ position: 'absolute', right: 0, bottom: 'calc(100% + 6px)', width: 320 }}>
-                      <div className="modal-body" style={{ padding: 0 }}>
-                        {models.map(m => (
-                          <div key={m} onClick={() => { setRetryOpen(false); if (node.parentId) onRetry(node.parentId, m) }} className="mono" style={{ padding: '8px 10px', cursor: 'pointer', borderBottom: '1px solid var(--border)' }}>{labels?.[m] || m}</div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+        onClick={() => onSelect(node.id)}
+      >
+        <div className="flex items-start gap-3">
+          <div className="flex-1 space-y-3">
+            <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+              <MessageSquare className="h-4 w-4" />
+              <span className="mono">{node.role}</span>
+              {node.role === 'assistant' && node.model && (
+                <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] text-muted-foreground">
+                  {labels?.[node.model] || node.model}
+                </span>
+              )}
+            </div>
+            {editing ? (
+              <div className="space-y-3">
+                <Textarea
+                  value={draft}
+                  onChange={e => setDraft(e.target.value)}
+                  rows={5}
+                  className="bg-secondary/50 text-base"
+                  autoFocus
+                />
+                <div className="flex flex-wrap items-center gap-3">
+                  <Select value={editModel} onValueChange={setEditModel}>
+                    <SelectTrigger className="w-64 bg-secondary/60">
+                      <SelectValue placeholder="Select model" />
+                    </SelectTrigger>
+                    <SelectContent className="w-72">
+                      {models.map(m => (
+                        <SelectItem key={m} value={m}>
+                          {labels?.[m] || m}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="ml-auto flex items-center gap-2">
+                    <Button variant="ghost" onClick={() => setEditing(false)}>Cancel</Button>
+                    <Button onClick={() => { setEditing(false); onEditUser(node.id, draft, editModel) }}>
+                      Save to new branch
+                    </Button>
+                  </div>
                 </div>
-                {node.parentId && (
-                  <button className="button ghost" onClick={() => onRetry(node.parentId!, node.model || defaultModel)}>RETRY</button>
-                )}
-              </>
+              </div>
+            ) : (
+              <div className="whitespace-pre-wrap text-base leading-6 text-foreground/90">
+                {node.content || <span className="text-muted-foreground">Generating…</span>}
+              </div>
+            )}
+          </div>
+          <div className="flex flex-col items-end gap-2" onClick={e => e.stopPropagation()}>
+            <Dialog open={openConfirm} onOpenChange={setOpenConfirm}>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label="Delete message">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Delete this branch?</DialogTitle>
+                  <DialogDescription>
+                    Deleting a message removes every child in every branch beneath it. This cannot be undone.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter className="gap-2 sm:gap-3">
+                  <Button variant="ghost" onClick={() => setOpenConfirm(false)}>Cancel</Button>
+                  <Button variant="destructive" onClick={() => { setOpenConfirm(false); onDelete(node.id) }}>
+                    Delete
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            {node.role === 'assistant' && node.parentId && (
+              <div className="flex flex-col items-stretch gap-2">
+                <Select value={retryModel} onValueChange={setRetryModel}>
+                  <SelectTrigger className="w-44 bg-secondary/60">
+                    <SelectValue placeholder="Select model" />
+                  </SelectTrigger>
+                  <SelectContent className="w-56">
+                    {models.map(m => (
+                      <SelectItem key={m} value={m}>
+                        {labels?.[m] || m}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="gap-1"
+                  onClick={() => onRetry(node.parentId!, retryModel)}
+                >
+                  <Redo className="h-4 w-4" />
+                  Retry
+                </Button>
+              </div>
             )}
             {node.role === 'user' && (
-              <>
-                <button className="icon-button" aria-label="Delete message" title="Delete message" onClick={() => setConfirming(true)}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M3 6h18" stroke="#9aa0ab" strokeWidth="2" strokeLinecap="round"/>
-                    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="#9aa0ab" strokeWidth="2" strokeLinecap="round"/>
-                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" stroke="#9aa0ab" strokeWidth="2" strokeLinecap="round"/>
-                    <path d="M10 11v6M14 11v6" stroke="#9aa0ab" strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
-                </button>
-                <button className="button ghost" onClick={() => { setEditing(true); setDraft(node.content) }}>EDIT</button>
-              </>
+              <Button variant="secondary" size="sm" className="gap-1" onClick={() => { setEditing(true); setDraft(node.content) }}>
+                <Pencil className="h-4 w-4" />
+                Edit
+              </Button>
             )}
           </div>
         </div>
-      </div>
+      </Card>
 
       {node.role === 'assistant' && (
-        <Composer
-          placeholder="RESPOND TO THIS BRANCH (CREATE A NEW RESPONSE BRANCH)"
-          models={models}
-          defaultModel={defaultModel}
-          initialModel={node.model || lastModel || defaultModel}
-          labels={labels}
-          onSend={(t, m) => onSendFrom(node.id, t, m)}
-        />
+        <div className="mt-3">
+          <Composer
+            placeholder="Respond to this branch (create a new response branch)"
+            models={models}
+            defaultModel={defaultModel}
+            initialModel={node.model || lastModel || defaultModel}
+            labels={labels}
+            onSend={(t, m) => onSendFrom(node.id, t, m)}
+          />
+        </div>
       )}
 
       {children.length > 0 && (
-        <div className="children-row">
+        <div className="branch-row">
           {children.map(child => {
             const cols = subtreeColsMap.get(child.id) ?? 1
             const extra = Math.max(0, cols - 1)
             return (
-              <div className="column" key={child.id} style={{ ['--extra-cols' as any]: extra }}>
+              <div className="branch-column" key={child.id} style={{ ['--extra-cols' as any]: extra }}>
                 <MessageNode
                   node={child}
                   state={state}
@@ -152,20 +214,6 @@ export default function MessageNode({ node, state, onSelect, onRetry, onEditUser
               </div>
             )
           })}
-        </div>
-      )}
-
-      {confirming && (
-        <div className="modal-overlay" onClick={() => setConfirming(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-body">
-              Deleting a message deletes EVERY child messages in EVERY branch. Confirmation to delete?
-            </div>
-            <div className="modal-actions">
-              <button className="button pale" onClick={() => setConfirming(false)}>NO</button>
-              <button className="button danger" onClick={() => { setConfirming(false); onDelete(node.id) }}>YES</button>
-            </div>
-          </div>
         </div>
       )}
     </div>
