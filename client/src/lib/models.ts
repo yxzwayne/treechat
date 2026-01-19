@@ -11,18 +11,15 @@ export async function fetchAllowedModels(): Promise<ModelsResponse> {
     // Fallback to baked-in list if server unavailable
     return {
       models: [
-        'openai/gpt-5-chat',
-        'openai/gpt-5-mini',
-        'openai/o3',
-        'openai/o4-mini',
-        'google/gemini-2.5-flash-lite',
-        'google/gemini-2.5-flash',
-        'google/gemini-2.5-pro',
-        'anthropic/claude-sonnet-4',
-        'anthropic/claude-opus-4.1',
+        'google/gemini-3-flash-preview',
+        'openai/gpt-5.2-chat',
+        'anthropic/claude-sonnet-4.5',
       ],
-      default: 'openai/gpt-5-mini',
+      default: 'openai/gpt-5.2-chat',
       labels: {
+        'google/gemini-3-flash-preview': 'Gemini 3 Flash Preview',
+        'openai/gpt-5.2-chat': 'GPT‑5.2 Chat',
+        'anthropic/claude-sonnet-4.5': 'Claude 4.5 Sonnet',
         'openai/gpt-5-chat': 'GPT‑5 Chat',
         'openai/gpt-5-mini': 'GPT‑5 Mini',
         'openai/o3': 'OpenAI O3',

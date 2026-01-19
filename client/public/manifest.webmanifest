@@ -1,5 +1,5 @@
 {
-  "name": "TreeChat CC",
+  "name": "Treechat",
   "short_name": "TreeChat",
   "start_url": "/",
   "display": "standalone",
@@ -20,4 +20,3 @@
     }
   ]
 }
-

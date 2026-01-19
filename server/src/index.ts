@@ -4,7 +4,7 @@ import cors from 'cors'
 import type { Request, Response } from 'express'
 import OpenAI from 'openai'
 import { ensureSchema, getPool } from './pg'
-import { allowedModels, defaultModel, modelLabels } from './models'
+import { allowedModels, defaultModel, modelLabels, resolveModel } from './models'
 
 const app = express()
 app.use(cors())
@@ -22,7 +22,7 @@ if (!USE_MOCK) {
     baseURL: process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1',
     defaultHeaders: {
       'HTTP-Referer': process.env.OPENROUTER_SITE_URL || 'http://localhost:5173',
-      'X-Title': process.env.OPENROUTER_APP_NAME || 'TreeChat CC',
+      'X-Title': process.env.OPENROUTER_APP_NAME || 'Treechat',
     },
   })
 }
@@ -48,7 +48,7 @@ app.post('/api/chat', async (req: Request, res: Response) => {
   try {
     const { model, messages, conversationId, assistantExternalId } = req.body as { model?: string, messages: { role: 'system' | 'user' | 'assistant', content: string }[], conversationId?: string, assistantExternalId?: string }
     const requested = (model || process.env.MODEL || defaultModel) as string
-    const useModel = allowedModels.includes(requested as any) ? (requested as any) : defaultModel
+    const useModel = resolveModel(requested)
     const startedAt = Date.now()
     let fullResponse = ''
 
@@ -97,7 +97,7 @@ app.post('/api/chat', async (req: Request, res: Response) => {
     try {
       const body = (req as any).body || {}
       const requested = (body?.model || process.env.MODEL || defaultModel) as string
-      const useModel = allowedModels.includes(requested as any) ? (requested as any) : defaultModel
+      const useModel = resolveModel(requested)
       await logChat({ model: useModel, messages: body?.messages || [], response: '', startedAt: Date.now(), error: err?.message || String(err) })
     } catch {}
     res.status(500).end('Server error')

@@ -66,9 +66,9 @@ export default function LeftSidebar({ onClose }: { onClose: () => void }) {
           <path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
           <path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/>
         </svg>
-        <span className="mono" style={{ fontSize: 13 }}>CREATE NEW CHAT</span>
+        <span style={{ fontSize: 14 }}>Create new chat</span>
       </div>
-      <div className="mono" style={{ color: '#9aa0ab', marginBottom: 8 }}>HISTORY</div>
+      <div className="chat-row history-header" style={{ color: '#9aa0ab' }}>History</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         {items.map(it => (
           <div

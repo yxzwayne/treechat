@@ -15,8 +15,8 @@ export default function ConversationView() {
   const navigate = useNavigate()
   const { state, dispatch } = useConversation()
   const [models, setModels] = useState<string[]>([])
-  const [defaultModel, setDefaultModel] = useState<string>('openai/gpt-5-mini')
-  const [lastModel, setLastModel] = useState<string>('openai/gpt-5-mini')
+  const [defaultModel, setDefaultModel] = useState<string>('openai/gpt-5.2-chat')
+  const [lastModel, setLastModel] = useState<string>('openai/gpt-5.2-chat')
   const [labels, setLabels] = useState<Record<string, string>>({})
   const lastKey = (cid: string | null) => `treechat-last-model:${cid ?? 'global'}`
   const [columnWidth, setColumnWidth] = useState<number>(() => {
