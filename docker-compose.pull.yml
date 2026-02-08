@@ -14,7 +14,6 @@ services:
       retries: 30
 
   app:
-    # Publish an image (for example, to Docker Hub) and update this value.
     image: stellajager/treechat:latest
     depends_on:
       db:

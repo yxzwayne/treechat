@@ -20,7 +20,7 @@ Prereqs: Docker Desktop (includes `docker compose`).
 This is the easiest UX for users: pull a prebuilt image + Postgres via Docker Compose.
 
 ```
-curl -fsSL https://gist.githubusercontent.com/yxzwayne/8beab5c1dd1d1329ca03107061307723/raw/treechat-docker-compose.pull.yml \
+curl -fsSL https://raw.githubusercontent.com/yxzwayne/treechat/refs/heads/main/docker-compose.pull.yml \
   | docker compose -f - up -d --pull always
 ```
 
@@ -31,14 +31,14 @@ Defaults: the container starts with `USE_MOCK=1` (no API key required).
 If port 8787 is busy, pick another host port:
 
 ```
-curl -fsSL https://gist.githubusercontent.com/yxzwayne/8beab5c1dd1d1329ca03107061307723/raw/treechat-docker-compose.pull.yml \
+curl -fsSL https://raw.githubusercontent.com/yxzwayne/treechat/refs/heads/main/docker-compose.pull.yml \
   | HOST_PORT=8788 docker compose -f - up -d --pull always
 ```
 
 To run with real model calls, pass `USE_MOCK=0` and an API key to `docker compose`:
 
 ```
-curl -fsSL https://gist.githubusercontent.com/yxzwayne/8beab5c1dd1d1329ca03107061307723/raw/treechat-docker-compose.pull.yml \
+curl -fsSL https://raw.githubusercontent.com/yxzwayne/treechat/refs/heads/main/docker-compose.pull.yml \
   | USE_MOCK=0 OPENROUTER_API_KEY=... docker compose -f - up -d --pull always
 ```
 
