@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Pencil, RefreshCw, Trash2 } from 'lucide-react'
+import { Maximize2, Minimize2, Pencil, RefreshCw, Trash2 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { ConversationState, MessageNode as TMessageNode } from '../types'
 import Composer from './Composer'
@@ -29,6 +29,10 @@ export default function MessageNode({ node, state, onSelect, onRetry, onRetryAll
   const [confirming, setConfirming] = useState(false)
   const [editModelOpen, setEditModelOpen] = useState(false)
   const editMenuRef = useRef<HTMLDivElement | null>(null)
+  const [userExpanded, setUserExpanded] = useState(false)
+
+  const cancelDelete = () => setConfirming(false)
+  const confirmDelete = () => { setConfirming(false); onDelete(node.id) }
 
   const [retryMenuOpen, setRetryMenuOpen] = useState(false)
   const [retryMenuPane, setRetryMenuPane] = useState<'root' | 'models'>('root')
@@ -57,6 +61,25 @@ export default function MessageNode({ node, state, onSelect, onRetry, onRetryAll
     document.addEventListener('click', onDocClick)
     return () => { document.removeEventListener('click', onDocClick) }
   }, [retryMenuOpen])
+
+  useEffect(() => {
+    if (!confirming) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!confirming) return
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        e.stopPropagation()
+        confirmDelete()
+      } else if (e.key === 'Backspace' || e.key === 'Delete') {
+        e.preventDefault()
+        e.stopPropagation()
+        cancelDelete()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown, { capture: true })
+    return () => { window.removeEventListener('keydown', onKeyDown, { capture: true }) }
+  }, [confirming, node.id])
   useLayoutEffect(() => {
     if (!retryMenuOpen) {
       retryMenuShiftXRef.current = 0
@@ -102,6 +125,23 @@ export default function MessageNode({ node, state, onSelect, onRetry, onRetryAll
   const roleClass = node.role === 'user' ? 'node-user' : node.role === 'assistant' ? 'node-assistant' : 'node-system'
   const isActive = state.selectedLeafId === node.id
   const roleLabel = node.role.charAt(0).toUpperCase() + node.role.slice(1).toLowerCase()
+  const isLongUserContent = useMemo(() => {
+    if (node.role !== 'user') return false
+    if (editing) return false
+    if (!node.content) return false
+    const content = node.content
+    const lines = content.split('\n')
+    const lineCount = lines.length
+    const longestLine = lines.reduce((m, l) => Math.max(m, l.length), 0)
+    return content.length >= 800 || lineCount >= 14 || longestLine >= 240
+  }, [editing, node.content, node.role])
+  useEffect(() => {
+    if (!isLongUserContent && userExpanded) setUserExpanded(false)
+  }, [isLongUserContent, userExpanded])
+  useEffect(() => {
+    if (node.role !== 'user') return
+    setUserExpanded(false)
+  }, [node.content, node.id, node.role])
 
   return (
     <div>
@@ -150,7 +190,7 @@ export default function MessageNode({ node, state, onSelect, onRetry, onRetryAll
                 )}
               </div>
             ) : (
-              <div className="node-content plain">{node.content || <span style={{ color: 'var(--muted-2)' }}>GENERATING...</span>}</div>
+              <div className={`node-content plain ${isLongUserContent ? (userExpanded ? 'long expanded' : 'long') : ''}`}>{node.content || <span style={{ color: 'var(--muted-2)' }}>GENERATING...</span>}</div>
             )}
           </>
         )}
@@ -219,6 +259,16 @@ export default function MessageNode({ node, state, onSelect, onRetry, onRetryAll
 	            )}
             {node.role === 'user' && (
               <>
+                {isLongUserContent && (
+                  <button
+                    className="icon-button"
+                    aria-label={userExpanded ? 'Collapse long message' : 'Expand long message'}
+                    title={userExpanded ? 'Collapse' : 'Expand'}
+                    onClick={() => setUserExpanded(e => !e)}
+                  >
+                    {userExpanded ? <Minimize2 size={16} strokeWidth={2} /> : <Maximize2 size={16} strokeWidth={2} />}
+                  </button>
+                )}
                 <button
                   className="icon-button"
                   aria-label="Edit message"
@@ -278,14 +328,14 @@ export default function MessageNode({ node, state, onSelect, onRetry, onRetryAll
       )}
 
       {confirming && (
-        <div className="modal-overlay" onClick={() => setConfirming(false)}>
+        <div className="modal-overlay" onClick={cancelDelete}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-body">
               Deleting a message deletes EVERY child messages in EVERY branch. Confirmation to delete?
             </div>
             <div className="modal-actions">
-              <button className="button pale" onClick={() => setConfirming(false)}>No</button>
-              <button className="button danger" onClick={() => { setConfirming(false); onDelete(node.id) }}>Yes</button>
+              <button className="button pale" onClick={cancelDelete}>No</button>
+              <button className="button danger" onClick={confirmDelete}>Yes</button>
             </div>
           </div>
         </div>

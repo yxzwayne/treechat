@@ -12,6 +12,7 @@ Bundling Postgres into the same container is possible but not recommended (harde
 From the repo root:
 
 - `docker compose up --build`
+- `finch compose up --build` (Finch)
 
 Then open:
 
@@ -30,6 +31,7 @@ To run with real model calls, set `USE_MOCK=0` and pass an API key:
 If port 8787 is busy, pick another host port:
 
 - `HOST_PORT=8788 docker compose up --build`
+- `HOST_PORT=8788 finch compose up --build` (Finch)
 
 ## “One command” run (pull prebuilt image)
 
@@ -39,6 +41,11 @@ This repo includes `docker-compose.pull.yml` which is intended to be fetched and
 
 - `curl -fsSL https://raw.githubusercontent.com/yxzwayne/treechat/refs/heads/main/docker-compose.pull.yml | docker compose -f - up -d --pull always`
 
+Finch equivalent (download first):
+
+- `curl -fsSL https://raw.githubusercontent.com/yxzwayne/treechat/refs/heads/main/docker-compose.pull.yml -o /tmp/treechat.pull.yml`
+- `finch compose -f /tmp/treechat.pull.yml up -d`
+
 After it finishes, open:
 
 - http://localhost:8787
@@ -46,3 +53,10 @@ After it finishes, open:
 To enable real model calls, set `USE_MOCK=0` and pass either `OPENROUTER_API_KEY` or `OPENAI_API_KEY` to the `docker compose` command:
 
 - `curl -fsSL https://raw.githubusercontent.com/yxzwayne/treechat/refs/heads/main/docker-compose.pull.yml | USE_MOCK=0 OPENROUTER_API_KEY=... docker compose -f - up -d --pull always`
+- `USE_MOCK=0 OPENROUTER_API_KEY=... finch compose -f /tmp/treechat.pull.yml up -d` (Finch)
+
+To shut down (Docker or Finch), run `down` with the same compose file:
+
+- `curl -fsSL https://raw.githubusercontent.com/yxzwayne/treechat/refs/heads/main/docker-compose.pull.yml -o /tmp/treechat.pull.yml`
+- `docker compose -f /tmp/treechat.pull.yml down`
+- `finch compose -f /tmp/treechat.pull.yml down`

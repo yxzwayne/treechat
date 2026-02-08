@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Check, Cog, PanelLeftClose, PenLine, SlidersHorizontal, SquarePen, Trash2, X } from 'lucide-react'
+import { Check, Cog, PanelLeftClose, PenLine, Bot, SquarePen, Trash2, X } from 'lucide-react'
 import { ConversationListItem, listConversations, deleteConversation, getConversationSummary, updateConversationSummary } from '../lib/api'
 
 export default function LeftSidebar({ onClose, onOpenSettings }: { onClose: () => void, onOpenSettings: () => void }) {
@@ -17,6 +17,29 @@ export default function LeftSidebar({ onClose, onOpenSettings }: { onClose: () =
   const [limitNotice, setLimitNotice] = useState(false)
   const noticeTimer = useRef<number | null>(null)
   const editRef = useRef<HTMLTextAreaElement | null>(null)
+
+  const cancelConfirm = () => {
+    setConfirmId(null)
+  }
+
+  const confirmDelete = async () => {
+    if (!confirmId) return
+    if (deleting) return
+    const toDelete = confirmId as string
+    setDeleting(true)
+    try {
+      await deleteConversation(toDelete)
+      // Refresh list from server to ensure DB state is reflected
+      const list = await listConversations()
+      setItems(list)
+      if (id === toDelete) navigate('/')
+      setConfirmId(null)
+    } catch (e: any) {
+      setToast(`Delete failed: ${e?.message || 'server error'}`)
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   const commitEdit = async (conversationId: string) => {
     if (saving) return
@@ -57,6 +80,25 @@ export default function LeftSidebar({ onClose, onOpenSettings }: { onClose: () =
     })()
     return () => { alive = false }
   }, [id])
+
+  useEffect(() => {
+    if (!confirmId) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!confirmId) return
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        e.stopPropagation()
+        void confirmDelete()
+      } else if (e.key === 'Backspace' || e.key === 'Delete') {
+        e.preventDefault()
+        e.stopPropagation()
+        cancelConfirm()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown, { capture: true })
+    return () => { window.removeEventListener('keydown', onKeyDown, { capture: true }) }
+  }, [confirmId, deleting, id, navigate])
 
   return (
     <div className="left-sidebar">
@@ -225,7 +267,7 @@ export default function LeftSidebar({ onClose, onOpenSettings }: { onClose: () =
           aria-label="Open models"
           title="Open models"
         >
-          <SlidersHorizontal size={16} />
+          <Bot size={16} />
         </button>
         <button
           className="icon-button"
@@ -237,7 +279,7 @@ export default function LeftSidebar({ onClose, onOpenSettings }: { onClose: () =
         </button>
       </div>
       {confirmId && (
-        <div className="modal-overlay" onClick={() => setConfirmId(null)}>
+        <div className="modal-overlay" onClick={cancelConfirm}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-body">
               Delete the entire conversation?
@@ -246,26 +288,11 @@ export default function LeftSidebar({ onClose, onOpenSettings }: { onClose: () =
               </div>
             </div>
             <div className="modal-actions">
-              <button className="button" onClick={() => setConfirmId(null)} disabled={deleting}>Cancel</button>
+              <button className="button" onClick={cancelConfirm}>Cancel</button>
               <button
                 className="button danger"
                 disabled={deleting}
-                onClick={async () => {
-                  const toDelete = confirmId as string
-                  setDeleting(true)
-                  try {
-                    await deleteConversation(toDelete)
-                    // Refresh list from server to ensure DB state is reflected
-                    const list = await listConversations()
-                    setItems(list)
-                    if (id === toDelete) navigate('/')
-                    setConfirmId(null)
-                  } catch (e: any) {
-                    setToast(`Delete failed: ${e?.message || 'server error'}`)
-                  } finally {
-                    setDeleting(false)
-                  }
-                }}
+                onClick={confirmDelete}
               >
                 {deleting ? 'Deleting…' : 'Delete'}
               </button>

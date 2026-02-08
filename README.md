@@ -35,6 +35,21 @@ curl -fsSL https://raw.githubusercontent.com/yxzwayne/treechat/refs/heads/main/d
   | HOST_PORT=8788 docker compose -f - up -d --pull always
 ```
 
+Finch equivalent (download first):
+
+```
+curl -fsSL https://raw.githubusercontent.com/yxzwayne/treechat/refs/heads/main/docker-compose.pull.yml -o /tmp/treechat.pull.yml
+HOST_PORT=8787 finch compose -f /tmp/treechat.pull.yml up -d
+```
+
+To shut it down:
+
+```
+curl -fsSL https://raw.githubusercontent.com/yxzwayne/treechat/refs/heads/main/docker-compose.pull.yml -o /tmp/treechat.pull.yml
+docker compose -f /tmp/treechat.pull.yml down
+finch compose -f /tmp/treechat.pull.yml down
+```
+
 To run with real model calls, pass `USE_MOCK=0` and an API key to `docker compose`:
 
 ```
@@ -42,11 +57,18 @@ curl -fsSL https://raw.githubusercontent.com/yxzwayne/treechat/refs/heads/main/d
   | USE_MOCK=0 OPENROUTER_API_KEY=... docker compose -f - up -d --pull always
 ```
 
+Finch equivalent:
+
+```
+USE_MOCK=0 OPENROUTER_API_KEY=... finch compose -f /tmp/treechat.pull.yml up -d
+```
+
 ### Option B: Local (build from source)
 
 From this repo:
 
 - `docker compose up --build`
+- `finch compose up --build` (Finch)
 - open http://localhost:8787
 
 See `docs/DOCKER.md`.
