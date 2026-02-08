@@ -137,8 +137,8 @@
   --button-bg: var(--fx-base-150);
   --button-hover-bg: var(--fx-base-200);
   --button-active-bg: var(--fx-base-300);
-  --button-pale-bg: var(--fx-base-200);
-  --button-pale-hover-bg: var(--fx-base-300);
+  --button-pale-bg: var(--fx-base-100);
+  --button-pale-hover-bg: var(--fx-base-200);
   --button-pale-active-bg: var(--fx-base-400);
   --button-pale-text: var(--fx-base-900);
   --button-pale-border: var(--fx-base-300);
@@ -526,7 +526,6 @@ body {
   font-size: 14px;
 }
 .menu-pane {
-  padding: 6px;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -543,7 +542,6 @@ body {
   font-size: 1em;
   text-align: left;
   padding: 8px 10px;
-  border-radius: 6px;
   cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
@@ -652,8 +650,6 @@ body {
 }
 .settings-card {
   background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 6px;
   padding: 10px 12px;
 }
 .settings-muted {
@@ -666,7 +662,8 @@ body {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 12px;
+  font-family: var(--font-mono);
 }
 .settings-models-item {
   color: var(--text);
@@ -871,10 +868,71 @@ body {
 
 .models-header {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: start;
   gap: 12px;
   margin-bottom: 18px;
+}
+
+.models-header .button {
+  align-self: baseline;
+}
+
+.models-page .button {
+  background: transparent;
+  border: 0;
+  transition:
+    background-color 0.3s ease,
+    color 0.12s ease,
+    opacity 0.12s ease;
+}
+
+.models-page .button.pale,
+.models-page .button.danger,
+.models-page .button.accent {
+  background: transparent;
+  border: 0;
+}
+
+.models-page .button:hover:not(:disabled) {
+  background: var(--button-bg);
+  border: 0;
+}
+.models-page .button:active:not(:disabled) {
+  background: var(--button-hover-bg);
+  border: 0;
+}
+
+.models-page .button.pale:hover:not(:disabled) {
+  background: var(--button-pale-bg);
+  border: 0;
+}
+.models-page .button.pale:active:not(:disabled) {
+  background: var(--button-pale-hover-bg);
+  border: 0;
+}
+
+.models-page .button.danger:hover:not(:disabled) {
+  background: var(--danger-bg);
+  border: 0;
+}
+.models-page .button.danger:active:not(:disabled) {
+  background: var(--danger-hover-bg);
+  border: 0;
+}
+
+.models-page .button.accent:hover:not(:disabled) {
+  background: var(--accent);
+  border: 0;
+}
+.models-page .button.accent:active:not(:disabled) {
+  background: var(--accent-hover-bg);
+  border: 0;
+}
+
+.models-page .button:disabled {
+  background: transparent;
+  border: 0;
 }
 
 .models-main {

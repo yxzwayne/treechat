@@ -10,7 +10,3 @@ TreeChat is a minimal branching chat UI with a React/TypeScript client and an Ex
 - Testing approach (including bugfix workflow): `docs/TESTING.md`
 - Env/DB configuration: `docs/CONFIG.md`
 - Commit/PR expectations: `docs/CONTRIBUTING.md`
-
-## Bug Reports
-
-When I report a bug, don't start by trying to fix it. Instead, start by writing a test that reproduces the bug. Then, have subagents try to fix the bug and prove it with a passing test.

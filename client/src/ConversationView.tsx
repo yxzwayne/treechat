@@ -492,7 +492,7 @@ export default function ConversationView() {
               )}
               <div style={{ marginTop: 12 }}>
                 <Composer
-                  placeholder={id ? 'SEND A MESSAGE' : 'START A NEW CONVERSATION'}
+                  placeholder={id ? 'Send a message' : 'Start a new branching conversation'}
                   models={models}
                   defaultModel={defaultModel}
                   initialModel={lastModel}
