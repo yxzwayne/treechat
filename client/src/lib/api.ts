@@ -4,12 +4,18 @@ export async function streamChat(
   model: string,
   messages: { role: Role; content: string }[],
   onDelta: (t: string) => void,
-  opts?: { conversationId?: string, assistantExternalId?: string, signal?: AbortSignal }
+  opts?: { conversationId?: string, assistantExternalId?: string, signal?: AbortSignal, strict?: boolean }
 ) {
   const res = await fetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model, messages, conversationId: opts?.conversationId, assistantExternalId: opts?.assistantExternalId }),
+    body: JSON.stringify({
+      model,
+      messages,
+      conversationId: opts?.conversationId,
+      assistantExternalId: opts?.assistantExternalId,
+      strict: opts?.strict,
+    }),
     signal: opts?.signal
   })
   if (!res.ok) {

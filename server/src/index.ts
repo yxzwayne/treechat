@@ -2,9 +2,22 @@ import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
 import type { Request, Response } from 'express'
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import OpenAI from 'openai'
-import { ensureSchema, getPool } from './pg'
-import { allowedModels, defaultModel, modelLabels, resolveModel } from './models'
+import { ensureSchema, getPool } from './pg.js'
+import { defaultModel } from './models.js'
+import {
+  addEnabledModel,
+  getEnabledModelPayload,
+  listEnabledModelsDetailed,
+  ModelRegistryError,
+  removeEnabledModel,
+  resolveRequestedModel,
+  searchCatalogModels,
+  setDefaultEnabledModel,
+} from './model-registry.js'
 
 const app = express()
 app.use(cors())
@@ -12,6 +25,35 @@ app.use(express.json())
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 8787
 const USE_MOCK = process.env.USE_MOCK === '1'
+const SERVE_CLIENT = process.env.SERVE_CLIENT === '1'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const defaultStaticDir = path.resolve(__dirname, '../public')
+
+function formatUpstreamError(err: any): { status: number; body: string } {
+  const status = typeof err?.status === 'number' && Number.isFinite(err.status) ? err.status : 500
+  const message = (err?.error?.message || err?.message || 'Server error') as string
+
+  const meta = err?.error?.metadata
+  const requestedProviders = Array.isArray(meta?.requested_providers) ? meta.requested_providers.filter(Boolean) : []
+  const availableProviders = Array.isArray(meta?.available_providers) ? meta.available_providers.filter(Boolean) : []
+
+  const lines: string[] = [String(message).trim() || 'Server error']
+  if (requestedProviders.length) lines.push(`Requested providers: ${requestedProviders.join(', ')}`)
+  if (availableProviders.length) lines.push(`Available providers: ${availableProviders.join(', ')}`)
+
+  if (
+    status === 404 &&
+    typeof message === 'string' &&
+    message.toLowerCase().includes('no allowed providers are available')
+  ) {
+    lines.push(
+      'Tip: this usually means your OpenRouter API key has a provider allowlist (or restriction) that excludes all providers for this model. Update the key restrictions to allow one of the available providers, or pick a different model.'
+    )
+  }
+
+  return { status, body: lines.join('\n') }
+}
 
 let openai: OpenAI | null = null
 if (!USE_MOCK) {
@@ -27,7 +69,7 @@ if (!USE_MOCK) {
   })
 }
 
-app.get('/health', async (_req, res) => {
+app.get('/health', async (_req: Request, res: Response) => {
   try {
     const pool = getPool()
     await pool.query('select 1')
@@ -38,7 +80,106 @@ app.get('/health', async (_req, res) => {
 })
 
 app.get('/api/models', async (_req: Request, res: Response) => {
-  res.json({ models: allowedModels, default: defaultModel, labels: modelLabels })
+  try {
+    const pool = getPool()
+    const { config, labels } = await getEnabledModelPayload(pool)
+    res.json({ models: config.enabledIds, default: config.defaultId, labels, updatedAt: config.updatedAt })
+  } catch (error: any) {
+    const status = error instanceof ModelRegistryError ? error.status : 500
+    res.status(status).json({ error: error?.message || 'Failed to load models' })
+  }
+})
+
+app.get('/api/models/enabled', async (_req: Request, res: Response) => {
+  try {
+    const pool = getPool()
+    const payload = await listEnabledModelsDetailed(pool)
+    res.json({
+      models: payload.models,
+      default: payload.config.defaultId,
+      updatedAt: payload.config.updatedAt,
+      stale: payload.stale,
+      fetchedAt: payload.fetchedAt,
+    })
+  } catch (error: any) {
+    const status = error instanceof ModelRegistryError ? error.status : 500
+    res.status(status).json({ error: error?.message || 'Failed to load enabled models' })
+  }
+})
+
+app.post('/api/models/enabled', async (req: Request, res: Response) => {
+  try {
+    const id = String((req.body as { id?: string } | undefined)?.id || '').trim()
+    const pool = getPool()
+    await addEnabledModel(pool, id)
+    const payload = await listEnabledModelsDetailed(pool)
+    res.json({
+      models: payload.models,
+      default: payload.config.defaultId,
+      updatedAt: payload.config.updatedAt,
+      stale: payload.stale,
+      fetchedAt: payload.fetchedAt,
+    })
+  } catch (error: any) {
+    const status = error instanceof ModelRegistryError ? error.status : 500
+    res.status(status).json({ error: error?.message || 'Failed to add enabled model' })
+  }
+})
+
+app.delete('/api/models/enabled/:id', async (req: Request, res: Response) => {
+  try {
+    const id = String(req.params.id || '').trim()
+    const pool = getPool()
+    await removeEnabledModel(pool, id)
+    const payload = await listEnabledModelsDetailed(pool)
+    res.json({
+      models: payload.models,
+      default: payload.config.defaultId,
+      updatedAt: payload.config.updatedAt,
+      stale: payload.stale,
+      fetchedAt: payload.fetchedAt,
+    })
+  } catch (error: any) {
+    const status = error instanceof ModelRegistryError ? error.status : 500
+    res.status(status).json({ error: error?.message || 'Failed to remove enabled model' })
+  }
+})
+
+app.put('/api/models/default', async (req: Request, res: Response) => {
+  try {
+    const id = String((req.body as { id?: string } | undefined)?.id || '').trim()
+    const pool = getPool()
+    await setDefaultEnabledModel(pool, id)
+    const payload = await listEnabledModelsDetailed(pool)
+    res.json({
+      models: payload.models,
+      default: payload.config.defaultId,
+      updatedAt: payload.config.updatedAt,
+      stale: payload.stale,
+      fetchedAt: payload.fetchedAt,
+    })
+  } catch (error: any) {
+    const status = error instanceof ModelRegistryError ? error.status : 500
+    res.status(status).json({ error: error?.message || 'Failed to set default model' })
+  }
+})
+
+app.get('/api/openrouter/models', async (req: Request, res: Response) => {
+  try {
+    const q = typeof req.query.q === 'string' ? req.query.q : ''
+    const provider = typeof req.query.provider === 'string' ? req.query.provider : ''
+    const limit = Number(typeof req.query.limit === 'string' ? req.query.limit : 25)
+    const offset = Number(typeof req.query.offset === 'string' ? req.query.offset : 0)
+    const randomRaw = typeof req.query.random === 'string' ? req.query.random : ''
+    const random = randomRaw === '1' || randomRaw.toLowerCase() === 'true'
+
+    const pool = getPool()
+    const result = await searchCatalogModels(pool, { q, provider, limit, offset, random })
+    res.json(result)
+  } catch (error: any) {
+    const status = error instanceof ModelRegistryError ? error.status : 500
+    res.status(status).json({ error: error?.message || 'Failed to search model catalog' })
+  }
 })
 
 app.post('/api/chat', async (req: Request, res: Response) => {
@@ -46,9 +187,20 @@ app.post('/api/chat', async (req: Request, res: Response) => {
   res.setHeader('Transfer-Encoding', 'chunked')
 
   try {
-    const { model, messages, conversationId, assistantExternalId } = req.body as { model?: string, messages: { role: 'system' | 'user' | 'assistant', content: string }[], conversationId?: string, assistantExternalId?: string }
-    const requested = (model || process.env.MODEL || defaultModel) as string
-    const useModel = resolveModel(requested)
+    const { model, messages, conversationId, assistantExternalId, strict } = req.body as {
+      model?: string
+      messages: { role: 'system' | 'user' | 'assistant', content: string }[]
+      conversationId?: string
+      assistantExternalId?: string
+      strict?: boolean
+    }
+    const requested = String(model || process.env.MODEL || defaultModel).trim()
+    const pool = getPool()
+    const { model: useModel } = await resolveRequestedModel(pool, requested)
+    const strictMode = Boolean(strict) && typeof model === 'string' && model.trim() !== ''
+    if (strictMode && useModel !== requested) {
+      return res.status(409).end(`Model not enabled: ${requested}`)
+    }
     const startedAt = Date.now()
     let fullResponse = ''
 
@@ -93,14 +245,22 @@ app.post('/api/chat', async (req: Request, res: Response) => {
     }
     res.end()
   } catch (err: any) {
-    console.error(err)
+    const formatted = formatUpstreamError(err)
+    console.error('[chat] upstream error:', formatted.body)
     try {
       const body = (req as any).body || {}
       const requested = (body?.model || process.env.MODEL || defaultModel) as string
-      const useModel = resolveModel(requested)
-      await logChat({ model: useModel, messages: body?.messages || [], response: '', startedAt: Date.now(), error: err?.message || String(err) })
+      const pool = getPool()
+      const { model: useModel } = await resolveRequestedModel(pool, requested)
+      await logChat({ model: useModel, messages: body?.messages || [], response: '', startedAt: Date.now(), error: formatted.body })
     } catch {}
-    res.status(500).end('Server error')
+    if (!res.headersSent) {
+      res.status(formatted.status).end(formatted.body)
+      return
+    }
+    try {
+      res.end()
+    } catch {}
   }
 })
 
@@ -453,7 +613,7 @@ app.get('/api/conversations', async (_req: Request, res: Response) => {
          from conversations c
         order by c.updated_at desc, c.uuid desc`
     )
-    const out = r.rows.map(row => ({ id: String(row.id), preview: String(row.preview || '') }))
+    const out = r.rows.map((row: { id: unknown; preview: unknown }) => ({ id: String(row.id), preview: String(row.preview || '') }))
     res.json(out)
   } catch (e: any) {
     res.status(500).json({ error: e?.message || 'db error' })
@@ -508,7 +668,21 @@ app.delete('/api/conversations/:id', async (req: Request, res: Response) => {
   }
 })
 
-ensureSchema().then(() => {
+if (SERVE_CLIENT) {
+  const staticDir = process.env.STATIC_DIR ? path.resolve(process.env.STATIC_DIR) : defaultStaticDir
+  const indexPath = path.join(staticDir, 'index.html')
+  if (!fs.existsSync(indexPath)) {
+    console.warn(`[server] SERVE_CLIENT=1 but index.html not found at: ${indexPath}`)
+  } else {
+    app.use(express.static(staticDir))
+    app.get('*', (req: Request, res: Response) => {
+      if (req.path.startsWith('/api') || req.path.startsWith('/health')) return res.status(404).end()
+      res.sendFile(indexPath)
+    })
+  }
+}
+
+ensureSchemaWithRetry().then(() => {
   app.listen(PORT, () => {
     console.log(`[server] listening on http://localhost:${PORT}`)
   })
@@ -516,6 +690,22 @@ ensureSchema().then(() => {
   console.error('[server] failed to ensure schema', e)
   process.exit(1)
 })
+
+async function ensureSchemaWithRetry() {
+  const retries = Math.max(1, Number(process.env.DB_CONNECT_RETRIES ?? 60))
+  const delayMs = Math.max(0, Number(process.env.DB_CONNECT_DELAY_MS ?? 1000))
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      await ensureSchema()
+      return
+    } catch (e: any) {
+      const msg = e?.message || String(e)
+      if (attempt >= retries) throw e
+      console.warn(`[server] db not ready (${attempt}/${retries}): ${msg}`)
+      await sleep(delayMs)
+    }
+  }
+}
 
 async function* mockStream(messages: { role: string, content: string }[]) {
   const user = [...messages].reverse().find(m => m.role === 'user')

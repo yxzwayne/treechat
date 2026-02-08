@@ -3,40 +3,33 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useConversation, pathToRoot, freshState } from './state'
 import { Role } from './types'
 import MessageNode from './components/MessageNode'
-import Sidebar from './components/Sidebar'
 import LeftSidebar from './components/LeftSidebar'
 import { streamChat, createConversation, saveSnapshot, loadConversation, upsertMessage, deleteMessage } from './lib/api'
 import { fetchAllowedModels, ModelsResponse } from './lib/models'
+import { pickEnabledModel } from './lib/model-utils'
 import { startAutoFlush } from './lib/sync'
 import Composer from './components/Composer'
+import SettingsModal from './components/SettingsModal'
+import { Monitor, Moon, PanelLeftOpen, SquarePen, Sun } from 'lucide-react'
 
 export default function ConversationView() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { state, dispatch } = useConversation()
+  const [theme, setTheme] = useState<'dark' | 'light' | 'auto'>(() => {
+    try {
+      const raw = localStorage.getItem('treechat-theme')
+      if (raw === 'light' || raw === 'auto') return raw
+      return 'dark'
+    } catch {
+      return 'dark'
+    }
+  })
   const [models, setModels] = useState<string[]>([])
   const [defaultModel, setDefaultModel] = useState<string>('openai/gpt-5.2-chat')
   const [lastModel, setLastModel] = useState<string>('openai/gpt-5.2-chat')
   const [labels, setLabels] = useState<Record<string, string>>({})
   const lastKey = (cid: string | null) => `treechat-last-model:${cid ?? 'global'}`
-  const [columnWidth, setColumnWidth] = useState<number>(() => {
-    try {
-      const raw = localStorage.getItem('treechat-col-w')
-      if (!raw) return 720
-      const n = Number(raw)
-      if (!Number.isFinite(n)) return 720
-      return Math.min(1440, Math.max(520, Math.floor(n)))
-    } catch {
-      return 720
-    }
-  })
-
-  useEffect(() => {
-    try {
-      const n = Math.min(1440, Math.max(520, Math.floor(columnWidth)))
-      localStorage.setItem('treechat-col-w', String(n))
-    } catch {}
-  }, [columnWidth])
   const root = useMemo(() => state.nodes[state.rootId], [state])
 
   // Compute subtree column spans once per state change
@@ -69,21 +62,35 @@ export default function ConversationView() {
       return true
     }
   })
-  const [rightOpen, setRightOpen] = useState<boolean>(() => {
-    try {
-      const v = localStorage.getItem('treechat-right-open')
-      if (v == null) return false
-      return v === '1' || v === 'true'
-    } catch {
-      return false
-    }
-  })
+  const [settingsOpen, setSettingsOpen] = useState<boolean>(false)
   // One-shot flag to prevent wiping in-memory state right after creating a conversation
   const suppressNextLoad = useRef(false)
 
   useEffect(() => {
     startAutoFlush()
   }, [])
+
+  useEffect(() => {
+    try { localStorage.setItem('treechat-theme', theme) } catch {}
+
+    function applyResolved(resolved: 'dark' | 'light') {
+      document.documentElement.dataset.theme = resolved
+      const meta = document.querySelector('meta[name="theme-color"]')
+      if (meta && meta instanceof HTMLMetaElement) {
+        meta.content = resolved === 'dark' ? '#100F0F' : '#FFFCF0'
+      }
+    }
+
+    if (theme === 'auto') {
+      const mq = window.matchMedia('(prefers-color-scheme: dark)')
+      applyResolved(mq.matches ? 'dark' : 'light')
+      const handler = (e: MediaQueryListEvent) => applyResolved(e.matches ? 'dark' : 'light')
+      mq.addEventListener('change', handler)
+      return () => mq.removeEventListener('change', handler)
+    } else {
+      applyResolved(theme)
+    }
+  }, [theme])
 
   useEffect(() => {
     (async () => {
@@ -93,21 +100,22 @@ export default function ConversationView() {
       setLabels(r.labels || {})
       try {
         const stored = localStorage.getItem(lastKey(conversationId))
-        const initial = stored && r.models.includes(stored) ? stored : r.default
+        const initial = pickEnabledModel(stored, r.models, r.default)
         setLastModel(initial)
       } catch {
-        setLastModel(r.default)
+        setLastModel(pickEnabledModel(null, r.models, r.default))
       }
     })()
     // also update when conversation changes
   }, [conversationId])
 
   useEffect(() => {
+    setLastModel(prev => pickEnabledModel(prev, models, defaultModel))
+  }, [models, defaultModel])
+
+  useEffect(() => {
     try { localStorage.setItem('treechat-left-open', leftOpen ? '1' : '0') } catch {}
   }, [leftOpen])
-  useEffect(() => {
-    try { localStorage.setItem('treechat-right-open', rightOpen ? '1' : '0') } catch {}
-  }, [rightOpen])
 
   // When the route param changes, either load that conversation or reset to a fresh state
   useEffect(() => {
@@ -141,6 +149,7 @@ export default function ConversationView() {
   async function sendFrom(parentAssistantId: string, content: string, model: string) {
     const t = content.trim()
     if (!t) return
+    const chosenModel = pickEnabledModel(model, models, defaultModel)
     // Ensure a conversation exists on first send and seed initial snapshot (system prompt only)
     let convId = conversationId
     if (!convId) {
@@ -160,9 +169,9 @@ export default function ConversationView() {
     if (convId) {
       try { await upsertMessage(convId, { external_id: userId, parent_external_id: parentAssistantId, role: 'user', content: t, created_ts: Date.now() }) } catch {}
     }
-    dispatch({ type: 'start_assistant', parentId: userId, id: assistantId, model })
+    dispatch({ type: 'start_assistant', parentId: userId, id: assistantId, model: chosenModel })
     if (convId) {
-      try { await upsertMessage(convId, { external_id: assistantId, parent_external_id: userId, role: 'assistant', content: '', model, created_ts: Date.now() }) } catch {}
+      try { await upsertMessage(convId, { external_id: assistantId, parent_external_id: userId, role: 'assistant', content: '', model: chosenModel, created_ts: Date.now() }) } catch {}
     }
     const messages = pathToRoot(state, parentAssistantId)
       .map(m => ({ role: m.role as Role, content: m.content }))
@@ -171,10 +180,10 @@ export default function ConversationView() {
     controllers.current.set(assistantId, ac)
     try {
       await streamChat(
-        model,
+        chosenModel,
         messages,
         (delta) => dispatch({ type: 'append_assistant', id: assistantId, delta }),
-        { conversationId: convId ?? undefined, assistantExternalId: assistantId, signal: ac.signal }
+        { conversationId: convId ?? undefined, assistantExternalId: assistantId, signal: ac.signal, strict: true }
       )
       dispatch({ type: 'finalize_assistant', id: assistantId })
     } catch (e: any) {
@@ -186,8 +195,93 @@ export default function ConversationView() {
     }
   }
 
+  async function sendFromAll(parentAssistantId: string, content: string, primaryModel: string) {
+    const t = content.trim()
+    if (!t) return
+    const chosenPrimary = pickEnabledModel(primaryModel, models, defaultModel)
+    const enabledModels = models.length > 0 ? models : [chosenPrimary]
+
+    // Ensure a conversation exists on first send and seed initial snapshot (system prompt only)
+    let convId = conversationId
+    if (!convId) {
+      convId = await createConversation()
+      setConversationId(convId)
+      try {
+        await saveSnapshot(convId, { nodes: Object.values(state.nodes), rootId: state.rootId })
+      } catch {}
+      // Navigate to the conversation route
+      // Suppress the next loader-triggered state replace so streaming UI isn't wiped
+      suppressNextLoad.current = true
+      navigate(`/c/${convId}`)
+    }
+
+    const baseTs = Date.now()
+    const userId = crypto.randomUUID()
+    dispatch({ type: 'send_user', parentId: parentAssistantId, content: t, id: userId })
+    if (convId) {
+      try {
+        await upsertMessage(convId, {
+          external_id: userId,
+          parent_external_id: parentAssistantId,
+          role: 'user',
+          content: t,
+          created_ts: baseTs,
+        })
+      } catch {}
+    }
+
+    const messages = pathToRoot(state, parentAssistantId)
+      .map(m => ({ role: m.role as Role, content: m.content }))
+      .concat([{ role: 'user' as Role, content: t }])
+
+    const assistants = enabledModels.map((modelId, idx) => ({
+      model: modelId,
+      id: crypto.randomUUID(),
+      createdTs: baseTs + 1 + idx,
+    }))
+    const primaryAssistantId = assistants.find(a => a.model === chosenPrimary)?.id || assistants[0]?.id
+
+    for (const a of assistants) {
+      dispatch({ type: 'start_assistant', parentId: userId, id: a.id, model: a.model })
+      if (convId) {
+        try {
+          await upsertMessage(convId, {
+            external_id: a.id,
+            parent_external_id: userId,
+            role: 'assistant',
+            content: '',
+            model: a.model,
+            created_ts: a.createdTs,
+          })
+        } catch {}
+      }
+    }
+    if (primaryAssistantId) dispatch({ type: 'select', id: primaryAssistantId })
+
+    const isAbort = (e: any) => e?.name === 'AbortError' || /aborted/i.test(String(e?.message))
+    await Promise.allSettled(assistants.map(async (a) => {
+      const ac = new AbortController()
+      controllers.current.set(a.id, ac)
+      try {
+        await streamChat(
+          a.model,
+          messages,
+          (delta) => dispatch({ type: 'append_assistant', id: a.id, delta }),
+          { conversationId: convId ?? undefined, assistantExternalId: a.id, signal: ac.signal, strict: true }
+        )
+        dispatch({ type: 'finalize_assistant', id: a.id })
+      } catch (e: any) {
+        if (!isAbort(e)) {
+          dispatch({ type: 'append_assistant', id: a.id, delta: `\n[Error: ${e?.message || String(e)}]` })
+        }
+      } finally {
+        controllers.current.delete(a.id)
+      }
+    }))
+  }
+
   async function retryAtUser(userNodeId: string, modelOverride?: string) {
-    const model = modelOverride || lastModel || defaultModel
+    const model = pickEnabledModel(modelOverride || lastModel || defaultModel, models, defaultModel)
     const assistantId = crypto.randomUUID()
     dispatch({ type: 'start_assistant', parentId: userNodeId, id: assistantId, model })
     if (conversationId) {
@@ -201,7 +295,7 @@ export default function ConversationView() {
         model,
         messages,
         (delta) => dispatch({ type: 'append_assistant', id: assistantId, delta }),
-        { conversationId: conversationId ?? undefined, assistantExternalId: assistantId, signal: ac.signal }
+        { conversationId: conversationId ?? undefined, assistantExternalId: assistantId, signal: ac.signal, strict: true }
       )
       dispatch({ type: 'finalize_assistant', id: assistantId })
     } catch (e: any) {
@@ -213,7 +307,61 @@ export default function ConversationView() {
     }
   }
 
+  async function retryAllAtUser(userNodeId: string, primaryModelOverride?: string) {
+    const chosenPrimary = pickEnabledModel(primaryModelOverride || lastModel || defaultModel, models, defaultModel)
+    const enabledModels = models.length > 0 ? models : [chosenPrimary]
+    const baseTs = Date.now()
+
+    const messages = pathToRoot(state, userNodeId).map(m => ({ role: m.role as Role, content: m.content }))
+
+    const assistants = enabledModels.map((modelId, idx) => ({
+      model: modelId,
+      id: crypto.randomUUID(),
+      createdTs: baseTs + idx,
+    }))
+    const primaryAssistantId = assistants.find(a => a.model === chosenPrimary)?.id || assistants[0]?.id
+
+    for (const a of assistants) {
+      dispatch({ type: 'start_assistant', parentId: userNodeId, id: a.id, model: a.model })
+      if (conversationId) {
+        try {
+          await upsertMessage(conversationId, {
+            external_id: a.id,
+            parent_external_id: userNodeId,
+            role: 'assistant',
+            content: '',
+            model: a.model,
+            created_ts: a.createdTs,
+          })
+        } catch {}
+      }
+    }
+    if (primaryAssistantId) dispatch({ type: 'select', id: primaryAssistantId })
+
+    const isAbort = (e: any) => e?.name === 'AbortError' || /aborted/i.test(String(e?.message))
+    await Promise.allSettled(assistants.map(async (a) => {
+      const ac = new AbortController()
+      controllers.current.set(a.id, ac)
+      try {
+        await streamChat(
+          a.model,
+          messages,
+          (delta) => dispatch({ type: 'append_assistant', id: a.id, delta }),
+          { conversationId: conversationId ?? undefined, assistantExternalId: a.id, signal: ac.signal, strict: true }
+        )
+        dispatch({ type: 'finalize_assistant', id: a.id })
+      } catch (e: any) {
+        if (!isAbort(e)) {
+          dispatch({ type: 'append_assistant', id: a.id, delta: `\n[Error: ${e?.message || String(e)}]` })
+        }
+      } finally {
+        controllers.current.delete(a.id)
+      }
+    }))
+  }
+
   async function editUser(nodeId: string, newContent: string, model: string) {
+    const chosenModel = pickEnabledModel(model, models, defaultModel)
     const newUserId = crypto.randomUUID()
     dispatch({ type: 'edit_user', nodeId, newContent, newId: newUserId })
     if (conversationId) {
@@ -221,9 +369,9 @@ export default function ConversationView() {
       try { await upsertMessage(conversationId, { external_id: newUserId, parent_external_id: parent, role: 'user', content: newContent, created_ts: Date.now() }) } catch {}
     }
     const assistantId = crypto.randomUUID()
-    dispatch({ type: 'start_assistant', parentId: newUserId, id: assistantId, model })
+    dispatch({ type: 'start_assistant', parentId: newUserId, id: assistantId, model: chosenModel })
     if (conversationId) {
-      try { await upsertMessage(conversationId, { external_id: assistantId, parent_external_id: newUserId, role: 'assistant', content: '', model, created_ts: Date.now() }) } catch {}
+      try { await upsertMessage(conversationId, { external_id: assistantId, parent_external_id: newUserId, role: 'assistant', content: '', model: chosenModel, created_ts: Date.now() }) } catch {}
     }
     const messages = pathToRoot(state, nodeId)
       .slice(0, -1) // up to original's parent
@@ -233,10 +381,10 @@ export default function ConversationView() {
     controllers.current.set(assistantId, ac)
     try {
       await streamChat(
-        model,
+        chosenModel,
         messages,
         (delta) => dispatch({ type: 'append_assistant', id: assistantId, delta }),
-        { conversationId: conversationId ?? undefined, assistantExternalId: assistantId, signal: ac.signal }
+        { conversationId: conversationId ?? undefined, assistantExternalId: assistantId, signal: ac.signal, strict: true }
       )
       dispatch({ type: 'finalize_assistant', id: assistantId })
     } catch (e: any) {
@@ -287,75 +435,60 @@ export default function ConversationView() {
 
   return (
     <div className="app-shell">
-      <div className="container" style={{ ['--col-w' as any]: `${columnWidth}px` }}>
+      <div
+        className="container"
+        style={{
+          ['--chat-left' as any]: leftOpen ? 'var(--sidebar-w)' : '0px',
+          ['--chat-right' as any]: '0px',
+        }}
+      >
         <div className="top-bar">
           <div style={{ display: 'flex', gap: 8 }}>
             {!leftOpen && (
               <>
                 <button
-                  className="sidepanel-toggle-btn"
+                  className="icon-button"
                   onClick={() => setLeftOpen(true)}
                   aria-label="Open left sidebar"
                   title="Open left sidebar"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-tree-pine-icon lucide-tree-pine">
-                    <path d="m17 14 3 3.3a1 1 0 0 1-.7 1.7H4.7a1 1 0 0 1-.7-1.7L7 14h-.3a1 1 0 0 1-.7-1.7L9 9h-.2A1 1 0 0 1 8 7.3L12 3l4 4.3a1 1 0 0 1-.8 1.7H15l3 3.3a1 1 0 0 1-.7 1.7H17Z"/>
-                    <path d="M12 22v-3"/>
-                  </svg>
+                  <PanelLeftOpen size={16} />
                 </button>
                 <button
-                  className="sidepanel-toggle-btn"
+                  className="icon-button"
                   onClick={() => navigate('/')}
                   aria-label="Create new chat"
                   title="Create new chat"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-square-pen-icon lucide-square-pen">
-                    <path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                    <path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/>
-                  </svg>
+                  <SquarePen size={16} />
                 </button>
               </>
             )}
           </div>
           <div>
-            {!rightOpen && (
-              <button
-                className="sidepanel-toggle-btn"
-                onClick={() => setRightOpen(true)}
-                aria-label="Open right sidebar"
-                title="Open right sidebar"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-cog-icon lucide-cog">
-                  <path d="M11 10.27 7 3.34"/>
-                  <path d="m11 13.73-4 6.93"/>
-                  <path d="M12 22v-2"/>
-                  <path d="M12 2v2"/>
-                  <path d="M14 12h8"/>
-                  <path d="m17 20.66-1-1.73"/>
-                  <path d="m17 3.34-1 1.73"/>
-                  <path d="M2 12h2"/>
-                  <path d="m20.66 17-1.73-1"/>
-                  <path d="m20.66 7-1.73 1"/>
-                  <path d="m3.34 17 1.73-1"/>
-                  <path d="m3.34 7 1.73 1"/>
-                  <circle cx="12" cy="12" r="2"/>
-                  <circle cx="12" cy="12" r="8"/>
-                </svg>
-              </button>
-            )}
+            <button
+              className="icon-button"
+              onClick={() => setTheme(t => t === 'dark' ? 'light' : t === 'light' ? 'auto' : 'dark')}
+              aria-label={theme === 'dark' ? 'Switch to light mode' : theme === 'light' ? 'Switch to auto mode' : 'Switch to dark mode'}
+              title={theme === 'dark' ? 'Switch to light mode' : theme === 'light' ? 'Switch to auto (system)' : 'Switch to dark mode'}
+            >
+              {theme === 'dark' ? <Sun size={16} /> : theme === 'light' ? <Monitor size={16} /> : <Moon size={16} />}
+            </button>
           </div>
         </div>
         {leftOpen && (
           <div className="left-pane">
-            <LeftSidebar onClose={() => setLeftOpen(false)} />
+            <LeftSidebar onClose={() => setLeftOpen(false)} onOpenSettings={() => setSettingsOpen(true)} />
           </div>
         )}
-        <div className="tree-pane" style={{ marginLeft: leftOpen ? 'var(--sidebar-w)' as any : 0, marginRight: rightOpen ? 'var(--sidebar-w)' as any : 0 }}>
+        <div className="tree-pane" style={{ marginLeft: leftOpen ? 'var(--sidebar-w)' as any : 0, marginRight: 0 }}>
           {root.children.length === 0 ? (
             <>
-              <div className="node-card">
-                {id ? 'This conversation is empty. Start by sending a message. To branch, edit a user message or retry an AI response.' : 'Start a new conversation by typing a message below. To branch, edit a user message or retry an AI response.'}
-              </div>
+              {id && (
+                <div className="node-card">
+                  This conversation is empty. Start by sending a message. To branch, edit a user message or retry an AI response.
+                </div>
+              )}
               <div style={{ marginTop: 12 }}>
                 <Composer
                   placeholder={id ? 'SEND A MESSAGE' : 'START A NEW CONVERSATION'}
@@ -363,7 +496,18 @@ export default function ConversationView() {
                   defaultModel={defaultModel}
                   initialModel={lastModel}
                   labels={labels}
-                  onSend={(t, m) => { setLastModel(m); try { localStorage.setItem(lastKey(conversationId), m) } catch {}; sendFrom(root.id, t, m) }}
+                  onSend={(t, m) => {
+                    const safeModel = pickEnabledModel(m, models, defaultModel)
+                    setLastModel(safeModel)
+                    try { localStorage.setItem(lastKey(conversationId), safeModel) } catch {}
+                    sendFrom(root.id, t, safeModel)
+                  }}
+                  onSendAll={(t, m) => {
+                    const safeModel = pickEnabledModel(m, models, defaultModel)
+                    setLastModel(safeModel)
+                    try { localStorage.setItem(lastKey(conversationId), safeModel) } catch {}
+                    sendFromAll(root.id, t, safeModel)
+                  }}
                 />
               </div>
             </>
@@ -379,9 +523,36 @@ export default function ConversationView() {
                       node={child}
                       state={state}
                       onSelect={(leafId) => dispatch({ type: 'select', id: leafId })}
-                      onRetry={(userId, m) => { if (m) { setLastModel(m); try { localStorage.setItem(lastKey(conversationId), m) } catch {} } retryAtUser(userId, m) }}
-                      onEditUser={(nodeId, text, m) => { setLastModel(m); try { localStorage.setItem(lastKey(conversationId), m) } catch {}; editUser(nodeId, text, m) }}
-                      onSendFrom={(parentId, text, m) => { setLastModel(m); try { localStorage.setItem(lastKey(conversationId), m) } catch {}; sendFrom(parentId, text, m) }}
+                      onRetry={(userId, m) => {
+                        const safeModel = pickEnabledModel(m, models, defaultModel)
+                        setLastModel(safeModel)
+                        try { localStorage.setItem(lastKey(conversationId), safeModel) } catch {}
+                        retryAtUser(userId, safeModel)
+                      }}
+                      onRetryAll={(userId, m) => {
+                        const safeModel = pickEnabledModel(m, models, defaultModel)
+                        setLastModel(safeModel)
+                        try { localStorage.setItem(lastKey(conversationId), safeModel) } catch {}
+                        retryAllAtUser(userId, safeModel)
+                      }}
+                      onEditUser={(nodeId, text, m) => {
+                        const safeModel = pickEnabledModel(m, models, defaultModel)
+                        setLastModel(safeModel)
+                        try { localStorage.setItem(lastKey(conversationId), safeModel) } catch {}
+                        editUser(nodeId, text, safeModel)
+                      }}
+                      onSendFrom={(parentId, text, m) => {
+                        const safeModel = pickEnabledModel(m, models, defaultModel)
+                        setLastModel(safeModel)
+                        try { localStorage.setItem(lastKey(conversationId), safeModel) } catch {}
+                        sendFrom(parentId, text, safeModel)
+                      }}
+                      onSendAllFrom={(parentId, text, m) => {
+                        const safeModel = pickEnabledModel(m, models, defaultModel)
+                        setLastModel(safeModel)
+                        try { localStorage.setItem(lastKey(conversationId), safeModel) } catch {}
+                        sendFromAll(parentId, text, safeModel)
+                      }}
                       onDelete={handleDelete}
                       models={models}
                       defaultModel={defaultModel}
@@ -395,30 +566,30 @@ export default function ConversationView() {
             </div>
           )}
         </div>
-        {rightOpen && (
-          <div className="side-pane">
-            <Sidebar
-            state={state}
-            onSetSystem={async (c) => {
-              // Update local state immediately
-              dispatch({ type: 'set_system', content: c })
-              // If this conversation already exists, persist the root system message
-              if (conversationId) {
-                try {
-                  await upsertMessage(conversationId, {
-                    external_id: state.rootId,
-                    parent_external_id: null,
-                    role: 'system',
-                    content: c,
-                    created_ts: Date.now(),
-                  })
-                } catch {}
-              }
-            }}
-            columnWidth={columnWidth}
-            onSetColumnWidth={setColumnWidth}
-            onClose={() => setRightOpen(false)}
-          />
+        {settingsOpen && (
+          <div className="pane-modal-overlay" onClick={() => setSettingsOpen(false)}>
+            <div onClick={e => e.stopPropagation()}>
+              <SettingsModal
+                state={state}
+                onSetSystem={async (c) => {
+                  // Update local state immediately
+                  dispatch({ type: 'set_system', content: c })
+                  // If this conversation already exists, persist the root system message
+                  if (conversationId) {
+                    try {
+                      await upsertMessage(conversationId, {
+                        external_id: state.rootId,
+                        parent_external_id: null,
+                        role: 'system',
+                        content: c,
+                        created_ts: Date.now(),
+                      })
+                    } catch {}
+                  }
+                }}
+                onClose={() => setSettingsOpen(false)}
+              />
+            </div>
           </div>
         )}
       </div>

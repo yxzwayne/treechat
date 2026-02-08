@@ -1,14 +1,19 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Pencil, RefreshCw, Trash2 } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
 import { ConversationState, MessageNode as TMessageNode } from '../types'
 import Composer from './Composer'
+import ModelSelectList from './ModelSelectList'
 
 type Props = {
   node: TMessageNode
   state: ConversationState
   onSelect: (id: string) => void
   onRetry: (parentId: string, model?: string) => void
+  onRetryAll: (parentId: string, primaryModel?: string) => void
   onEditUser: (nodeId: string, newContent: string, model: string) => void
   onSendFrom: (parentId: string, text: string, model: string) => void
+  onSendAllFrom: (parentId: string, text: string, primaryModel: string) => void
   onDelete: (nodeId: string) => void
   models: string[]
   defaultModel: string
@@ -17,29 +22,86 @@ type Props = {
   subtreeColsMap: Map<string, number>
 }
 
-export default function MessageNode({ node, state, onSelect, onRetry, onEditUser, onSendFrom, onDelete, models, defaultModel, lastModel, labels, subtreeColsMap }: Props) {
+export default function MessageNode({ node, state, onSelect, onRetry, onRetryAll, onEditUser, onSendFrom, onSendAllFrom, onDelete, models, defaultModel, lastModel, labels, subtreeColsMap }: Props) {
   const children = useMemo(() => node.children.map(id => state.nodes[id]), [node, state.nodes])
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(node.content)
   const [confirming, setConfirming] = useState(false)
-  const [retryOpen, setRetryOpen] = useState(false)
-  const menuRef = useRef<HTMLDivElement | null>(null)
+  const [editModelOpen, setEditModelOpen] = useState(false)
+  const editMenuRef = useRef<HTMLDivElement | null>(null)
+
+  const [retryMenuOpen, setRetryMenuOpen] = useState(false)
+  const [retryMenuPane, setRetryMenuPane] = useState<'root' | 'models'>('root')
+  const retryMenuRef = useRef<HTMLDivElement | null>(null)
+  const [retryMenuShiftX, setRetryMenuShiftX] = useState(0)
+  const retryMenuShiftXRef = useRef(0)
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
-      if (!retryOpen) return
-      const el = menuRef.current
-      if (!el) { setRetryOpen(false); return }
-      if (!(e.target instanceof Node)) { setRetryOpen(false); return }
-      if (!el.contains(e.target)) setRetryOpen(false)
+      if (!editModelOpen) return
+      const el = editMenuRef.current
+      if (!el) { setEditModelOpen(false); return }
+      if (!(e.target instanceof Node)) { setEditModelOpen(false); return }
+      if (!el.contains(e.target)) setEditModelOpen(false)
     }
     document.addEventListener('click', onDocClick)
     return () => { document.removeEventListener('click', onDocClick) }
-  }, [retryOpen])
+  }, [editModelOpen])
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (!retryMenuOpen) return
+      const el = retryMenuRef.current
+      if (!el) { setRetryMenuOpen(false); setRetryMenuPane('root'); return }
+      if (!(e.target instanceof Node)) { setRetryMenuOpen(false); setRetryMenuPane('root'); return }
+      if (!el.contains(e.target)) { setRetryMenuOpen(false); setRetryMenuPane('root') }
+    }
+    document.addEventListener('click', onDocClick)
+    return () => { document.removeEventListener('click', onDocClick) }
+  }, [retryMenuOpen])
+  useLayoutEffect(() => {
+    if (!retryMenuOpen) {
+      retryMenuShiftXRef.current = 0
+      setRetryMenuShiftX(0)
+      return
+    }
+
+    const el = retryMenuRef.current
+    if (!el) return
+    const boundsEl = el.closest('.tree-pane') as HTMLElement | null
+    const bounds = boundsEl ?? document.documentElement
+    const PAD = 8
+
+    const clamp = () => {
+      const menu = retryMenuRef.current
+      if (!menu) return
+      const boundsRect = bounds.getBoundingClientRect()
+      const rect = menu.getBoundingClientRect()
+      const minLeft = boundsRect.left + PAD
+      const maxRight = boundsRect.right - PAD
+      let next = retryMenuShiftXRef.current
+      if (rect.left < minLeft) next += (minLeft - rect.left)
+      else if (rect.right > maxRight) next += (maxRight - rect.right)
+      next = Math.round(next)
+      if (next !== retryMenuShiftXRef.current) {
+        retryMenuShiftXRef.current = next
+        setRetryMenuShiftX(next)
+      }
+    }
+
+    clamp()
+    // Keep the menu from drifting under fixed sidebars when the tree pane scrolls/resizes.
+    boundsEl?.addEventListener('scroll', clamp, { passive: true })
+    window.addEventListener('resize', clamp)
+    return () => {
+      boundsEl?.removeEventListener('scroll', clamp as any)
+      window.removeEventListener('resize', clamp)
+    }
+  }, [retryMenuOpen, retryMenuPane])
   const parentAssistantModel = node.parentId ? state.nodes[node.parentId!]?.model : undefined
   const [editModel, setEditModel] = useState<string>(parentAssistantModel || lastModel || defaultModel)
 
   const roleClass = node.role === 'user' ? 'node-user' : node.role === 'assistant' ? 'node-assistant' : 'node-system'
   const isActive = state.selectedLeafId === node.id
+  const roleLabel = node.role.charAt(0).toUpperCase() + node.role.slice(1).toLowerCase()
 
   return (
     <div>
@@ -47,70 +109,127 @@ export default function MessageNode({ node, state, onSelect, onRetry, onEditUser
         {editing ? (
           <div>
             <textarea className="text-input" rows={4} value={draft} onChange={e => setDraft(e.target.value)} />
-            <div style={{ marginTop: 6, display: 'flex', gap: 8, alignItems: 'center' }}>
-              <button className="button" onClick={() => { setEditing(false) }}>CANCEL</button>
-              <button className="button accent" onClick={() => { setEditing(false); onEditUser(node.id, draft, editModel) }}>SAVE TO NEW BRANCH</button>
-              <div style={{ position: 'relative', marginLeft: 'auto' }}>
-                <button className="button pale" onClick={(e) => { e.stopPropagation(); setRetryOpen(o => !o) }}>MODEL: {labels?.[editModel] || editModel}</button>
-                {retryOpen && (
-                  <div ref={menuRef} className="modal" style={{ position: 'absolute', right: 0, bottom: 'calc(100% + 6px)', width: 320 }}>
-                    <div className="modal-body" style={{ padding: 0 }}>
-                      {models.map(m => (
-                        <div key={m} onClick={() => { setEditModel(m); setRetryOpen(false) }} className="mono" style={{ padding: '8px 10px', cursor: 'pointer', borderBottom: '1px solid var(--border)', background: m === editModel ? '#182036' : 'transparent' }}>{labels?.[m] || m}</div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+            <div style={{ marginTop: '12px', display: 'flex', gap: 8, alignItems: 'center' }}>
+	              <div style={{ position: 'relative', marginLeft: 'auto' }}>
+	                <button className="button pale" onClick={(e) => { e.stopPropagation(); setRetryMenuOpen(false); setRetryMenuPane('root'); setEditModelOpen(o => !o) }}>Model: {labels?.[editModel] || editModel}</button>
+	                {editModelOpen && (
+	                  <div ref={editMenuRef} className="modal menu model-menu" style={{ position: 'absolute', right: 0, bottom: 'calc(100% + 6px)' }}>
+	                    <div className="menu-pane">
+	                      <ModelSelectList
+	                        models={models}
+	                        value={editModel}
+	                        labels={labels}
+	                        onSelect={(m) => { setEditModel(m); setEditModelOpen(false) }}
+	                      />
+	                    </div>
+	                  </div>
+	                )}
+	              </div>
+	              <button className="button" onClick={() => { setEditing(false) }}>Cancel</button>
+	              <button className="button accent" onClick={() => { setEditing(false); onEditUser(node.id, draft, editModel) }}>Save</button>
             </div>
           </div>
         ) : (
-          <div className="node-content">{node.content || <span style={{ color: '#666' }}>GENERATING...</span>}</div>
+          <>
+            {node.role === 'assistant' ? (
+              <div className="node-content markdown">
+                {node.content ? (
+                  <ReactMarkdown
+                    components={{
+                      a: ({ node: _node, href, children, ...props }) => (
+                        <a href={href} target="_blank" rel="noreferrer noopener" {...props}>
+                          {children}
+                        </a>
+                      ),
+                    }}
+                  >
+                    {node.content}
+                  </ReactMarkdown>
+                ) : (
+                  <span style={{ color: 'var(--muted-2)' }}>GENERATING...</span>
+                )}
+              </div>
+            ) : (
+              <div className="node-content plain">{node.content || <span style={{ color: 'var(--muted-2)' }}>GENERATING...</span>}</div>
+            )}
+          </>
         )}
         <div className="node-header">
-          <span className="mono">{node.role.toUpperCase()}</span>
+          {node.role !== 'assistant' && (
+            <span className="mono" style={{ paddingRight: node.role === 'user' ? '8px' : undefined }}>{roleLabel}</span>
+          )}
           <div className="controls" onClick={e => e.stopPropagation()}>
-            {node.role === 'assistant' && (
-              <>
-                {node.model && (
-                  <span className="mono" style={{ color: '#9aa0ab' }}>{labels?.[node.model] || node.model}</span>
-                )}
-                <button className="icon-button" aria-label="Delete message" title="Delete message" onClick={() => setConfirming(true)}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M3 6h18" stroke="#9aa0ab" strokeWidth="2" strokeLinecap="round"/>
-                    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="#9aa0ab" strokeWidth="2" strokeLinecap="round"/>
-                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" stroke="#9aa0ab" strokeWidth="2" strokeLinecap="round"/>
-                    <path d="M10 11v6M14 11v6" stroke="#9aa0ab" strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
-                </button>
-                <div style={{ position: 'relative' }}>
-                  <button className="button ghost" onClick={() => setRetryOpen(o => !o)}>RETRY WITH</button>
-                  {retryOpen && (
-                    <div ref={menuRef} className="modal" style={{ position: 'absolute', right: 0, bottom: 'calc(100% + 6px)', width: 320 }}>
-                      <div className="modal-body" style={{ padding: 0 }}>
-                        {models.map(m => (
-                          <div key={m} onClick={() => { setRetryOpen(false); if (node.parentId) onRetry(node.parentId, m) }} className="mono" style={{ padding: '8px 10px', cursor: 'pointer', borderBottom: '1px solid var(--border)' }}>{labels?.[m] || m}</div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-                {node.parentId && (
-                  <button className="button ghost" onClick={() => onRetry(node.parentId!, node.model || defaultModel)}>RETRY</button>
-                )}
-              </>
-            )}
+	            {node.role === 'assistant' && (
+	              <>
+	                {node.model && (
+	                  <span style={{ color: 'var(--muted)', paddingRight: '8px' }}>{labels?.[node.model] || node.model}</span>
+	                )}
+	                {node.parentId && (
+	                  <div style={{ position: 'relative' }}>
+	                    <button
+	                      className="icon-button"
+	                      aria-label="Retry message"
+	                      title="Retry"
+	                      onClick={() => { setEditModelOpen(false); setRetryMenuPane('root'); setRetryMenuOpen(o => !o) }}
+	                    >
+	                      <RefreshCw size={16} strokeWidth={2} />
+	                    </button>
+	                    {retryMenuOpen && (
+	                      <div
+	                        ref={retryMenuRef}
+	                        className="retry-menu-wrap"
+	                        style={{ position: 'absolute', right: 0, bottom: 'calc(100% + 6px)', transform: `translateX(${retryMenuShiftX}px)` }}
+	                      >
+	                        <div className="modal menu retry-menu">
+	                          <div className="menu-pane">
+	                            <button className="menu-item" onClick={() => { setRetryMenuOpen(false); setRetryMenuPane('root'); onRetry(node.parentId!, node.model || defaultModel) }}>
+	                              Retry
+	                            </button>
+	                            <button className="menu-item" onClick={() => { setRetryMenuOpen(false); setRetryMenuPane('root'); onRetryAll(node.parentId!, node.model || defaultModel) }}>
+	                              Retry all enabled models ({models.length})
+	                            </button>
+	                            <button
+	                              className={`menu-item ${retryMenuPane === 'models' ? 'active' : ''}`}
+	                              onClick={() => setRetryMenuPane(p => (p === 'models' ? 'root' : 'models'))}
+	                            >
+	                              Retry with model
+	                            </button>
+	                          </div>
+	                        </div>
+	                        {retryMenuPane === 'models' && (
+	                          <div className="modal menu model-menu">
+	                            <div className="menu-pane">
+	                              <ModelSelectList
+	                                models={models}
+	                                value={node.model || defaultModel}
+	                                labels={labels}
+	                                onSelect={(m) => { setRetryMenuOpen(false); setRetryMenuPane('root'); onRetry(node.parentId!, m) }}
+	                              />
+	                            </div>
+	                          </div>
+	                        )}
+	                      </div>
+	                    )}
+	                  </div>
+	                )}
+	                <button className="icon-button" aria-label="Delete message" title="Delete message" onClick={() => setConfirming(true)}>
+	                  <Trash2 size={16} strokeWidth={2} />
+	                </button>
+	              </>
+	            )}
             {node.role === 'user' && (
               <>
-                <button className="icon-button" aria-label="Delete message" title="Delete message" onClick={() => setConfirming(true)}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M3 6h18" stroke="#9aa0ab" strokeWidth="2" strokeLinecap="round"/>
-                    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="#9aa0ab" strokeWidth="2" strokeLinecap="round"/>
-                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" stroke="#9aa0ab" strokeWidth="2" strokeLinecap="round"/>
-                    <path d="M10 11v6M14 11v6" stroke="#9aa0ab" strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
+                <button
+                  className="icon-button"
+                  aria-label="Edit message"
+                  title="Edit message"
+                  onClick={() => { setEditing(true); setDraft(node.content) }}
+                >
+                  <Pencil size={16} strokeWidth={2} />
                 </button>
-                <button className="button ghost" onClick={() => { setEditing(true); setDraft(node.content) }}>EDIT</button>
+                <button className="icon-button" aria-label="Delete message" title="Delete message" onClick={() => setConfirming(true)}>
+                  <Trash2 size={16} strokeWidth={2} />
+                </button>
               </>
             )}
           </div>
@@ -119,12 +238,13 @@ export default function MessageNode({ node, state, onSelect, onRetry, onEditUser
 
       {node.role === 'assistant' && (
         <Composer
-          placeholder="RESPOND TO THIS BRANCH (CREATE A NEW RESPONSE BRANCH)"
+          placeholder="Respond to this branch (creates a new branch)"
           models={models}
           defaultModel={defaultModel}
           initialModel={node.model || lastModel || defaultModel}
           labels={labels}
           onSend={(t, m) => onSendFrom(node.id, t, m)}
+          onSendAll={(t, m) => onSendAllFrom(node.id, t, m)}
         />
       )}
 
@@ -140,8 +260,10 @@ export default function MessageNode({ node, state, onSelect, onRetry, onEditUser
                   state={state}
                   onSelect={onSelect}
                   onRetry={onRetry}
+                  onRetryAll={onRetryAll}
                   onEditUser={onEditUser}
                   onSendFrom={onSendFrom}
+                  onSendAllFrom={onSendAllFrom}
                   onDelete={onDelete}
                   models={models}
                   defaultModel={defaultModel}
@@ -162,8 +284,8 @@ export default function MessageNode({ node, state, onSelect, onRetry, onEditUser
               Deleting a message deletes EVERY child messages in EVERY branch. Confirmation to delete?
             </div>
             <div className="modal-actions">
-              <button className="button pale" onClick={() => setConfirming(false)}>NO</button>
-              <button className="button danger" onClick={() => { setConfirming(false); onDelete(node.id) }}>YES</button>
+              <button className="button pale" onClick={() => setConfirming(false)}>No</button>
+              <button className="button danger" onClick={() => { setConfirming(false); onDelete(node.id) }}>Yes</button>
             </div>
           </div>
         </div>

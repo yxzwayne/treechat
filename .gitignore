@@ -29,6 +29,11 @@ pnpm-debug.log*
 .turbo
 .parcel-cache
 .cache
+**/.npm-cache
+**/.vite
+.direnv
+.envrc
+*.swp
 
 
 agent-notes/

@@ -1,0 +1,16 @@
+.git
+.DS_Store
+
+**/node_modules
+**/dist
+**/.env
+**/*.tsbuildinfo
+
+client/.vite
+client/.turbo
+server/.turbo
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*

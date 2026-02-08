@@ -11,24 +11,65 @@ This is a minimal React + TypeScript app that renders full branching conversatio
 - client: Vite + React + TypeScript UI that renders a conversation tree.
 - server: Express + OpenAI SDK proxy endpoint streaming assistant deltas.
 
-## Quick start
+## Quickstart (Docker)
+
+Prereqs: Docker Desktop (includes `docker compose`).
+
+### Option A: One command (pull a prebuilt image)
+
+This is the easiest UX for users: pull a prebuilt image + Postgres via Docker Compose.
+
+```
+curl -fsSL https://gist.githubusercontent.com/yxzwayne/8beab5c1dd1d1329ca03107061307723/raw/treechat-docker-compose.pull.yml \
+  | docker compose -f - up -d --pull always
+```
+
+Then open http://localhost:8787
+
+Defaults: the container starts with `USE_MOCK=1` (no API key required).
+
+If port 8787 is busy, pick another host port:
+
+```
+curl -fsSL https://gist.githubusercontent.com/yxzwayne/8beab5c1dd1d1329ca03107061307723/raw/treechat-docker-compose.pull.yml \
+  | HOST_PORT=8788 docker compose -f - up -d --pull always
+```
+
+To run with real model calls, pass `USE_MOCK=0` and an API key to `docker compose`:
+
+```
+curl -fsSL https://gist.githubusercontent.com/yxzwayne/8beab5c1dd1d1329ca03107061307723/raw/treechat-docker-compose.pull.yml \
+  | USE_MOCK=0 OPENROUTER_API_KEY=... docker compose -f - up -d --pull always
+```
+
+### Option B: Local (build from source)
+
+From this repo:
+
+- `docker compose up --build`
+- open http://localhost:8787
+
+See `docs/DOCKER.md`.
+
+## Developer setup (no Docker)
 
 1) Install deps
-   - client: `cd client && npm i`
-   - server: `cd server && npm i`
+   - client: `cd client && npm ci`
+   - server: `cd server && npm ci`
 
 2) Configure env
    - In `server/.env` set `OPENROUTER_API_KEY=your_key`
-   - Optional: USE_MOCK=1 to use a local mocked streaming model
+   - Optional: set `USE_MOCK=1` to run without network
 
-3) Run
-   - server: `npm run dev` (default port 8787)
-   - client: `npm run dev` (Vite dev server on 5173; proxied to http://localhost:8787)
+3) Run (two terminals)
+   - server: `cd server && npm run dev` (default port 8787)
+   - client: `cd client && npm run dev` (Vite dev server on 5173; proxied to the server)
 
-4) Use
-   - Type in the chat box while a leaf node is selected. The assistant response streams in as a new child under that leaf.
-   - Click Retry on a user message to generate a sibling assistant answer; all branches remain visible.
-   - Click Edit on a user message to create a branched edit and continue from there.
+## Using the app
+
+- Type while a leaf node is selected. The assistant response streams in as a new child under that leaf.
+- Click Retry on a user message to generate a sibling assistant answer; all branches remain visible.
+- Click Edit on a user message to create a branched edit and continue from there.
 
 # Developer Notes
 

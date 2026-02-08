@@ -175,6 +175,37 @@ export async function ensureSchema() {
 
   -- Helpful index on parent_id
   create index if not exists idx_messages_parent on messages(parent_id);
+
+  -- Local model configuration (single-user app)
+  create table if not exists model_config (
+    id int primary key,
+    enabled_ids text[] not null,
+    default_id text not null,
+    updated_at timestamptz not null default now()
+  );
+
+  -- Cached OpenRouter catalog used for server-side search
+  create table if not exists openrouter_model_catalog (
+    id text primary key,
+    canonical_slug text not null,
+    name text not null,
+    created bigint not null default 0,
+    description text not null default '',
+    context_length integer not null default 0,
+    provider text not null,
+    updated_at timestamptz not null default now()
+  );
+
+  create index if not exists idx_openrouter_model_catalog_provider
+    on openrouter_model_catalog(provider);
+
+  create index if not exists idx_openrouter_model_catalog_name
+    on openrouter_model_catalog(name);
+
+  create table if not exists openrouter_model_catalog_state (
+    id int primary key,
+    fetched_at timestamptz not null
+  );
   `
   await pool.query(sql)
 }
