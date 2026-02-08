@@ -621,8 +621,8 @@ body {
 }
 .settings-section {
   margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border);
+  padding-top: 0;
+  border-top: 0;
 }
 .settings-section-head {
   display: flex;
@@ -670,6 +670,11 @@ body {
 }
 .settings-models-item {
   color: var(--text);
+  font-size: 14px;
+}
+
+/* Settings modal: keep button text readable (avoid "small" buttons shrinking). */
+.settings-modal .button.small {
   font-size: 14px;
 }
 
