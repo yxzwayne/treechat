@@ -87,6 +87,9 @@ See `docs/DOCKER.md`.
    - server: `cd server && npm run dev` (default port 8787)
    - client: `cd client && npm run dev` (Vite dev server on 5173; proxied to the server)
 
+4) Tests
+   - client: `cd client && npm test`
+
 ## Using the app
 
 - Type while a leaf node is selected. The assistant response streams in as a new child under that leaf.

@@ -11,6 +11,7 @@ import { startAutoFlush } from './lib/sync'
 import Composer from './components/Composer'
 import SettingsModal from './components/SettingsModal'
 import { Monitor, Moon, PanelLeftOpen, SquarePen, Sun } from 'lucide-react'
+import { saveDefaultSystemPrompt } from './systemPrompt'
 
 export default function ConversationView() {
   const { id } = useParams()
@@ -574,6 +575,8 @@ export default function ConversationView() {
                 enabledModels={models}
                 modelLabels={labels}
                 onSetSystem={async (c) => {
+                  // Always persist the default system prompt (used for new conversations)
+                  saveDefaultSystemPrompt(c)
                   // Update local state immediately
                   dispatch({ type: 'set_system', content: c })
                   // If this conversation already exists, persist the root system message
