@@ -1,9 +1,23 @@
 import React, { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { X } from 'lucide-react'
 import { ConversationState } from '../types'
 
-export default function SettingsModal({ state, onSetSystem, onClose }: { state: ConversationState, onSetSystem: (c: string) => void, onClose: () => void }) {
+export default function SettingsModal({
+  state,
+  enabledModels,
+  modelLabels,
+  onSetSystem,
+  onClose,
+}: {
+  state: ConversationState
+  enabledModels: string[]
+  modelLabels?: Record<string, string>
+  onSetSystem: (c: string) => void
+  onClose: () => void
+}) {
   const sys = state.nodes[state.rootId]
+  const navigate = useNavigate()
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(sys.content)
   // Collapse long system prompts by default
@@ -22,6 +36,38 @@ export default function SettingsModal({ state, onSetSystem, onClose }: { state: 
         >
           <X size={16} />
         </button>
+      </div>
+
+      <div className="settings-section">
+        <div className="settings-section-head">
+          <div className="settings-section-head-left">
+            <div className="settings-label">Enabled Models</div>
+          </div>
+          <div className="settings-section-head-right">
+            <button
+              className="button ghost small"
+              onClick={() => {
+                onClose()
+                navigate('/models')
+              }}
+            >
+              Manage enabled models
+            </button>
+          </div>
+        </div>
+        <div className="settings-card settings-models-card" style={{ marginTop: 6 }}>
+          {enabledModels.length === 0 ? (
+            <div className="settings-muted">(loading models…)</div>
+          ) : (
+            <ul className="settings-models-list" aria-label="Enabled models">
+              {enabledModels.map((id) => (
+                <li key={id} className="settings-models-item">
+                  {modelLabels?.[id] || id}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
 
       <div className="settings-section">

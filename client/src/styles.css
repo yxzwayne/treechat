@@ -650,6 +650,28 @@ body {
   letter-spacing: 0.02em;
   margin-bottom: 6px;
 }
+.settings-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+.settings-muted {
+  color: var(--muted-2);
+  font-size: 13px;
+}
+.settings-models-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.settings-models-item {
+  color: var(--text);
+  font-size: 14px;
+}
 
 /* Left sidebar chat items */
 .left-sidebar {

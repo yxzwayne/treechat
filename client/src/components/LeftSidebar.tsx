@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Check, Cog, PanelLeftClose, PenLine, Bot, SquarePen, Trash2, X } from 'lucide-react'
+import { Check, Cog, PanelLeftClose, PenLine, SquarePen, Trash2, X } from 'lucide-react'
 import { ConversationListItem, listConversations, deleteConversation, getConversationSummary, updateConversationSummary } from '../lib/api'
 
 export default function LeftSidebar({ onClose, onOpenSettings }: { onClose: () => void, onOpenSettings: () => void }) {
@@ -261,14 +261,6 @@ export default function LeftSidebar({ onClose, onOpenSettings }: { onClose: () =
         </div>
       </div>
       <div className="sidebar-bottom-strip">
-        <button
-          className="icon-button"
-          onClick={() => navigate('/models')}
-          aria-label="Open models"
-          title="Open models"
-        >
-          <Bot size={16} />
-        </button>
         <button
           className="icon-button"
           onClick={onOpenSettings}

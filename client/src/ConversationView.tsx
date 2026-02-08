@@ -571,6 +571,8 @@ export default function ConversationView() {
             <div onClick={e => e.stopPropagation()}>
               <SettingsModal
                 state={state}
+                enabledModels={models}
+                modelLabels={labels}
                 onSetSystem={async (c) => {
                   // Update local state immediately
                   dispatch({ type: 'set_system', content: c })
