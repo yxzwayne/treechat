@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
-    "build": "tsc -b"
+    "build": "tsc -b",
+    "migrate:pg-to-file": "tsx src/scripts/migrate-pg-to-file.ts"
   },
   "dependencies": {
     "cors": "^2.8.5",

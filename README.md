@@ -1,94 +1,47 @@
 # TreeChat — Branching Chat UI
 
-https://github.com/user-attachments/assets/87ed3e76-2909-452c-bc45-37be0396bf60
-
 ## Overview
 
 This is a minimal React + TypeScript app that renders full branching conversation trees: user edits and assistant retries create sibling branches that are preserved and displayed side-by-side. This supports retries, user edits, selecting any leaf to continue the branch, and multi-model chats.
+
+![TreeChat screenshot](client/public/screenshots/feb26-exmp.png)
 
 ## What’s inside
 
 - client: Vite + React + TypeScript UI that renders a conversation tree.
 - server: Express + OpenAI SDK proxy endpoint streaming assistant deltas.
 
-## Quickstart (Docker)
+## Quickstart (local)
 
-Prereqs: Docker Desktop (includes `docker compose`).
+Prereqs: Node.js 18+. Release and electron-ification is coming.
 
-### Option A: One command (pull a prebuilt image)
+Data is stored on disk at `~/.treechat/data` by default (override with `TREECHAT_DATA_DIR`).
 
-This is the easiest UX for users: pull a prebuilt image + Postgres via Docker Compose.
-
+1) Clone + install
 ```
-curl -fsSL https://raw.githubusercontent.com/yxzwayne/treechat/refs/heads/main/docker-compose.pull.yml \
-  | docker compose -f - up -d --pull always
-```
-
-Then open http://localhost:8787
-
-Defaults: the container starts with `USE_MOCK=1` (no API key required).
-
-If port 8787 is busy, pick another host port:
-
-```
-curl -fsSL https://raw.githubusercontent.com/yxzwayne/treechat/refs/heads/main/docker-compose.pull.yml \
-  | HOST_PORT=8788 docker compose -f - up -d --pull always
+git clone https://github.com/yxzwayne/treechat.git
+cd treechat
+cd client && npm ci
+cd ../server && npm ci
+cd ..
 ```
 
-Finch equivalent (download first):
+2) Run (dev)
+   - Terminal A: `cd server && npm run dev` (API on http://localhost:8787)
+   - Terminal B: `cd client && npm run dev` (UI on http://localhost:5173)
 
-```
-curl -fsSL https://raw.githubusercontent.com/yxzwayne/treechat/refs/heads/main/docker-compose.pull.yml -o /tmp/treechat.pull.yml
-HOST_PORT=8787 finch compose -f /tmp/treechat.pull.yml up -d
-```
+3) Open the UI
+   - http://localhost:5173
 
-To shut it down:
+Notes:
+- By default, the server runs in mock mode when no API key is configured.
+- To use real models, add an API key in `server/.env` (see `docs/CONFIG.md`).
 
-```
-curl -fsSL https://raw.githubusercontent.com/yxzwayne/treechat/refs/heads/main/docker-compose.pull.yml -o /tmp/treechat.pull.yml
-docker compose -f /tmp/treechat.pull.yml down
-finch compose -f /tmp/treechat.pull.yml down
-```
+## Next steps
 
-To run with real model calls, pass `USE_MOCK=0` and an API key to `docker compose`:
-
-```
-curl -fsSL https://raw.githubusercontent.com/yxzwayne/treechat/refs/heads/main/docker-compose.pull.yml \
-  | USE_MOCK=0 OPENROUTER_API_KEY=... docker compose -f - up -d --pull always
-```
-
-Finch equivalent:
-
-```
-USE_MOCK=0 OPENROUTER_API_KEY=... finch compose -f /tmp/treechat.pull.yml up -d
-```
-
-### Option B: Local (build from source)
-
-From this repo:
-
-- `docker compose up --build`
-- `finch compose up --build` (Finch)
-- open http://localhost:8787
-
-See `docs/DOCKER.md`.
-
-## Developer setup (no Docker)
-
-1) Install deps
-   - client: `cd client && npm ci`
-   - server: `cd server && npm ci`
-
-2) Configure env
-   - In `server/.env` set `OPENROUTER_API_KEY=your_key`
-   - Optional: set `USE_MOCK=1` to run without network
-
-3) Run (two terminals)
-   - server: `cd server && npm run dev` (default port 8787)
-   - client: `cd client && npm run dev` (Vite dev server on 5173; proxied to the server)
-
-4) Tests
-   - client: `cd client && npm test`
+- Single-process mode (serve the built UI from the server): see `docs/BUILD.md`.
+- Env / storage configuration (including `USE_MOCK=1`): see `docs/CONFIG.md`.
+- Tests: `cd client && npm test`.
 
 ## Using the app
 
@@ -132,7 +85,5 @@ Notes
 
 
 # TODO
-
-- Image/file support: Allow uploading and rendering images/files in messages, and forwarding them to the model when supported. Include persistence in Postgres (blob storage path or presigned URL), display thumbnails, and drag-and-drop paste handling on the Composer.
-- ⚠️ when user edits a message, provide the option to "override current branch" and clearly notify them that this is a "delete plus create" operation
-- **New workflow, automatic conversation summary from the first user message**: this should be a separate workflow that runs like lambda on hardware with access to client, server and database. this workflow is triggered by a user sending the first message in a new conversation. This workflow has a system prompt instructing the model to summarize the following content and appends the user's first prompt. ask the summary to be under 10 words or characters if it's not a Latin language.
+- Image/file support: Allow uploading and rendering images/files in messages, and forwarding them to the model when supported. Include persistence in the filesystem store, display thumbnails, and drag-and-drop paste handling on the Composer.
+- New workflow, automatic conversation summary from the first user message: a separate async workflow triggered by a user sending the first message in a new conversation, instructing the model to summarize the first message to be under x words or characters if it's not a Latin language.

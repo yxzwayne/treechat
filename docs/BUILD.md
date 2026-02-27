@@ -19,5 +19,10 @@ Run both in separate terminals:
 - `cd server && npm run build && npm start`
 - `cd client && npm run build && npm run preview`
 
+To run the built UI from the server (single process):
+
+- `cd client && npm run build`
+- `cd server && npm run build && SERVE_CLIENT=1 npm start`
+
 Notes:
 - Use a recent Node.js (the server uses `fetch`; Node 18+ is a safe baseline).
